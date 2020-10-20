@@ -85,8 +85,8 @@ namespace Service
             {
                 var headers = new Dictionary<string, object>()
                 {
-                    { "FileId", _config.FileId },
-                    { "FileOutcome", status },
+                    { "file-id", _config.FileId },
+                    { "file-outcome", status },
                 };
 
                 var replyProps = channel.CreateBasicProperties();
