@@ -15,14 +15,17 @@ namespace Glasswall.CloudSdk.AWS.Rebuild
     [ExcludeFromCodeCoverage]
     public class Startup
     {
-        IConfigurationRoot Configuration { get; }
+        IFileProcessorConfig Config { get; }
 
         public Startup()
         {
-            var builder = new ConfigurationBuilder()
-                .AddEnvironmentVariables();
+            Config = new FileProcessorConfig(); 
 
-            Configuration = builder.Build();
+            var builder = new ConfigurationBuilder()
+                .AddEnvironmentVariables()
+                .Build();
+
+            builder.Bind(Config);
         }
 
         public void ConfigureServices(IServiceCollection services)
@@ -32,7 +35,7 @@ namespace Glasswall.CloudSdk.AWS.Rebuild
             services.AddSingleton<IFileProtector, FileProtector>();
             services.AddSingleton<IAdaptor<ContentManagementFlags, string>, GlasswallConfigurationAdaptor>();
             services.AddSingleton<IGlasswallFileProcessor, GlasswallFileProcessor>();
-            services.AddSingleton<IConfigurationRoot>(Configuration);
+            services.AddSingleton(Config);
 
             var p = (int)Environment.OSVersion.Platform;
 
