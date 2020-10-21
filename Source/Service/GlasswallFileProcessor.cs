@@ -1,12 +1,10 @@
 ﻿using Glasswall.Core.Engine.Common.FileProcessing;
 using Glasswall.Core.Engine.Common.PolicyConfig;
 using Glasswall.Core.Engine.Messaging;
-using Microsoft.Extensions.Configuration;
-using Newtonsoft.Json;
 using RabbitMQ.Client;
 using System;
+using System.Collections.Generic;
 using System.IO;
-using System.Text;
 
 namespace Service
 {
@@ -15,14 +13,14 @@ namespace Service
         private readonly IGlasswallVersionService _glasswallVersionService;
         private readonly IFileTypeDetector _fileTypeDetector;
         private readonly IFileProtector _fileProtector;
-        private readonly IConfigurationRoot _configuration;
+        private readonly IFileProcessorConfig _config;
 
-        public GlasswallFileProcessor(IGlasswallVersionService glasswallVersionService, IFileTypeDetector fileTypeDetector, IFileProtector fileProtector, IConfigurationRoot configuration)
+        public GlasswallFileProcessor(IGlasswallVersionService glasswallVersionService, IFileTypeDetector fileTypeDetector, IFileProtector fileProtector, IFileProcessorConfig config)
         {
             _glasswallVersionService = glasswallVersionService ?? throw new ArgumentNullException(nameof(glasswallVersionService));
             _fileTypeDetector = fileTypeDetector ?? throw new ArgumentNullException(nameof(fileTypeDetector));
             _fileProtector = fileProtector ?? throw new ArgumentNullException(nameof(fileProtector));
-            _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+            _config = config ?? throw new ArgumentNullException(nameof(config));
         }
 
         public void ProcessFile()
@@ -37,11 +35,11 @@ namespace Service
 
             Console.WriteLine($"Using Glasswall Version: {_glasswallVersionService.GetVersion()}");
 
-            var file = File.ReadAllBytes(_configuration["INPUT_PATH"]);
+            var file = File.ReadAllBytes(_config.InputPath);
 
             var fileType = _fileTypeDetector.DetermineFileType(file);
 
-            Console.WriteLine($"Filetype Detected: {fileType.FileTypeName}");
+            Console.WriteLine($"Filetype Detected for {_config.FileId}: {fileType.FileTypeName}");
 
             string status;
             if (fileType.FileType == FileType.Unknown)
@@ -72,9 +70,9 @@ namespace Service
 
             Directory.CreateDirectory("/output");
 
-            File.WriteAllBytes(_configuration["OUTPUT_PATH"], protectedFile ?? file);
+            File.WriteAllBytes(_config.OutputPath, protectedFile ?? file);
 
-            Console.WriteLine($"Status of: {status}");
+            Console.WriteLine($"Status of {status} for {_config.FileId}");
 
             return status;
         }
@@ -85,20 +83,19 @@ namespace Service
             using (var connection = factory.CreateConnection())
             using (var channel = connection.CreateModel())
             {
-                channel.QueueDeclare("adaptation-response-queue", false, false, false, null);
-                Console.WriteLine("Created Queue");
-
-                var response = new AdaptationResponse
+                var headers = new Dictionary<string, object>()
                 {
-                    FileId = _configuration["FILE_ID"],
-                    FileOutcome = status
+                    { "file-id", _config.FileId },
+                    { "file-outcome", status },
                 };
 
-                var message = JsonConvert.SerializeObject(response);
-                var body = Encoding.UTF8.GetBytes(message);
+                var replyProps = channel.CreateBasicProperties();
+                replyProps.Headers = headers;
 
-                channel.BasicPublish("adaptation-exchange", "adaptation-response", null, body);
-                Console.WriteLine($"Sent Message: {message}");
+                Console.Write($"ReplyTo: {_config.ReplyTo}, FileId: {_config.FileId}");
+
+                channel.BasicPublish("", _config.ReplyTo, basicProperties: replyProps);
+                Console.WriteLine($"Sent Message, FileId: {_config.FileId}, Outcome: {status}");
             };
         }
 
