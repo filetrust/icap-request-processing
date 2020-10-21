@@ -16,10 +16,13 @@ jobs:
           uses: actions/checkout@v1
           with:
             submodules: true
+            token: ${{ secrets.TOKEN_GITHUB }}
         - name: scan csharp code
           run: |
             /root/.dotnet/tools/dotnet-sonarscanner begin   /o:"${{ env.SONAR_ORG }}"  /d:sonar.login="${{ secrets.SONAR_TOKEN }}"  /k:"${{ env.SONAR_PROJECT }}"  /d:sonar.host.url=https://sonarcloud.io /d:sonar.cfamily.build-wrapper-output="build_wrapper_output_directory"
-            dotnet build
+            dotnet restore
+            dotnet build --configuration Release --no-restore
+            dotnet test --no-restore --verbosity normal
             /root/.dotnet/tools/dotnet-sonarscanner end /d:sonar.login="${{ secrets.SONAR_TOKEN }}" 
           env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
