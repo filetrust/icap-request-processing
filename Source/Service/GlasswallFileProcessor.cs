@@ -90,8 +90,9 @@ namespace Service
                 };
 
                 var replyProps = channel.CreateBasicProperties();
-                replyProps.CorrelationId = _config.CorrelationId;
                 replyProps.Headers = headers;
+
+                Console.Write($"ReplyTo: {_config.ReplyTo}, FileId: {_config.FileId}");
 
                 channel.BasicPublish("", _config.ReplyTo, basicProperties: replyProps);
                 Console.WriteLine($"Sent Message, FileId: {_config.FileId}, Outcome: {status}");
