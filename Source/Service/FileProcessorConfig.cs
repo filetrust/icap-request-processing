@@ -6,6 +6,5 @@
         public string InputPath { get; set; }
         public string OutputPath { get; set; }
         public string ReplyTo { get; set; }
-        public string CorrelationId { get; set; }
     }
 }
