@@ -1,12 +1,12 @@
-name: CI Build
+name: CD Build
 env:
   REPOSITORY: glasswallsolutions
   IMAGE: icap-request-processing
-  TAG: develop
+  TAG: main
 
 on:
   push:
-    branches: [ develop ]
+    branches: [ main ]
 
 jobs:
   build:

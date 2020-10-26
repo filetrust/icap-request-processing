@@ -124,7 +124,7 @@ namespace Service
                     InternalHyperlinks = ContentManagementFlagAction.Sanitise,
                     Javascript = ContentManagementFlagAction.Sanitise,
                     Metadata = ContentManagementFlagAction.Sanitise,
-                    Watermark = "Glasswall Approved"
+                    Watermark = "Glasswall Processed"
                 },
                 PowerPointContentManagement = new PowerPointContentManagement
                 {
