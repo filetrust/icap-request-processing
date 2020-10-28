@@ -38,7 +38,6 @@ namespace Service
         public string RebuildFile(byte[] file, string fileType)
         {
             string status;
-            byte[] protectedFile = null;
 
             var protectedFileResponse = _fileProtector.GetProtectedFile(GetDefaultContentManagement(), fileType, file);
 
@@ -46,6 +45,7 @@ namespace Service
             {
                 if (protectedFileResponse.IsDisallowed)
                 {
+                    Console.WriteLine($"File {_config.FileId} is disallowed");
                     status = FileOutcome.Unmodified;
                 }
                 else
@@ -53,13 +53,15 @@ namespace Service
                     status = FileOutcome.Failed;
                 }
             }
+            else if (protectedFileResponse.ProtectedFile == null)
+            {
+                status = FileOutcome.Failed;
+            }
             else
             {
-                protectedFile = protectedFileResponse.ProtectedFile;
                 status = FileOutcome.Replace;
+                File.WriteAllBytes(_config.OutputPath, protectedFileResponse.ProtectedFile);
             }
-
-            File.WriteAllBytes(_config.OutputPath, protectedFile ?? file);
 
             Console.WriteLine($"Status of {status} for {_config.FileId}");
 

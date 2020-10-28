@@ -9,6 +9,7 @@ using Glasswall.Core.Engine.FileProcessing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Service;
+using Service.Messaging;
 
 namespace Glasswall.CloudSdk.AWS.Rebuild
 {
@@ -37,7 +38,8 @@ namespace Glasswall.CloudSdk.AWS.Rebuild
             services.AddSingleton<IAdaptor<ContentManagementFlags, string>, GlasswallConfigurationAdaptor>();
             services.AddSingleton<IGlasswallFileProcessor, GlasswallFileProcessor>();
             services.AddSingleton<ITransactionEventProcessor, TransactionEventProcessor>();
-            services.AddSingleton<IMessageSender, RabbitMQSender>();
+            services.AddSingleton<IOutcomeSender, OutcomeSender>();
+            services.AddSingleton<ITransactionEventSender, TransactionEventSender>();
             services.AddSingleton(Config);
 
             var p = (int)Environment.OSVersion.Platform;
