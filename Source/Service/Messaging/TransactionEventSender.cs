@@ -11,7 +11,7 @@ namespace Service.Messaging
         private const string Exchange = "adaptation-exchange";
         private const string RoutingKey = "transaction-event";
 
-        private IModel _channel;
+        private readonly IModel _channel;
 
         public TransactionEventSender()
         {

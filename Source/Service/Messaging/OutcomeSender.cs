@@ -8,7 +8,7 @@ namespace Service.Messaging
     {
         private const string HostName = "rabbitmq-service";
 
-        private IModel _channel;
+        private readonly IModel _channel;
 
         public OutcomeSender()
         {
