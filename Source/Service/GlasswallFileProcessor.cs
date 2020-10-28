@@ -1,102 +1,70 @@
 ﻿using Glasswall.Core.Engine.Common.FileProcessing;
 using Glasswall.Core.Engine.Common.PolicyConfig;
 using Glasswall.Core.Engine.Messaging;
-using RabbitMQ.Client;
+using Service.StoreMessages;
 using System;
-using System.Collections.Generic;
 using System.IO;
 
 namespace Service
 {
     public class GlasswallFileProcessor : IGlasswallFileProcessor
     {
-        private readonly IGlasswallVersionService _glasswallVersionService;
         private readonly IFileTypeDetector _fileTypeDetector;
         private readonly IFileProtector _fileProtector;
+        private readonly IFileAnalyser _fileAnalyser;
         private readonly IFileProcessorConfig _config;
 
-        public GlasswallFileProcessor(IGlasswallVersionService glasswallVersionService, IFileTypeDetector fileTypeDetector, IFileProtector fileProtector, IFileProcessorConfig config)
+        public GlasswallFileProcessor(IFileTypeDetector fileTypeDetector, IFileProtector fileProtector, IFileAnalyser fileAnalyser, IFileProcessorConfig config)
         {
-            _glasswallVersionService = glasswallVersionService ?? throw new ArgumentNullException(nameof(glasswallVersionService));
             _fileTypeDetector = fileTypeDetector ?? throw new ArgumentNullException(nameof(fileTypeDetector));
             _fileProtector = fileProtector ?? throw new ArgumentNullException(nameof(fileProtector));
+            _fileAnalyser = fileAnalyser ?? throw new ArgumentNullException(nameof(fileAnalyser));
             _config = config ?? throw new ArgumentNullException(nameof(config));
         }
 
-        public void ProcessFile()
+        public FileTypeDetectionResponse GetFileType(byte[] file)
         {
-            var status = RebuildFile();
-            SendMessage(status);
-        }
-
-        private string RebuildFile()
-        {
-            byte[] protectedFile = null;
-
-            Console.WriteLine($"Using Glasswall Version: {_glasswallVersionService.GetVersion()}");
-
-            var file = File.ReadAllBytes(_config.InputPath);
-
             var fileType = _fileTypeDetector.DetermineFileType(file);
 
             Console.WriteLine($"Filetype Detected for {_config.FileId}: {fileType.FileTypeName}");
 
-            string status;
-            if (fileType.FileType == FileType.Unknown)
-            {
-                status = FileOutcome.Unmodified;
-            }
-            else
-            {
-                var protectedFileResponse = _fileProtector.GetProtectedFile(GetDefaultContentManagement(), fileType.FileTypeName, file);
+            return fileType;
+        }
 
-                if (!string.IsNullOrWhiteSpace(protectedFileResponse.ErrorMessage))
+        public string AnalyseFile(string fileType, byte[] file)
+        {
+            return _fileAnalyser.GetReport(GetDefaultContentManagement(), fileType, file);
+        }
+
+        public string RebuildFile(byte[] file, string fileType)
+        {
+            string status;
+            byte[] protectedFile = null;
+
+            var protectedFileResponse = _fileProtector.GetProtectedFile(GetDefaultContentManagement(), fileType, file);
+
+            if (!string.IsNullOrWhiteSpace(protectedFileResponse.ErrorMessage))
+            {
+                if (protectedFileResponse.IsDisallowed)
                 {
-                    if (protectedFileResponse.IsDisallowed)
-                    {
-                        status = FileOutcome.Unmodified;
-                    }
-                    else
-                    {
-                        status = FileOutcome.Failed;
-                    }
+                    status = FileOutcome.Unmodified;
                 }
                 else
                 {
-                    protectedFile = protectedFileResponse.ProtectedFile;
-                    status = FileOutcome.Replace;
+                    status = FileOutcome.Failed;
                 }
             }
-
-            Directory.CreateDirectory("/output");
+            else
+            {
+                protectedFile = protectedFileResponse.ProtectedFile;
+                status = FileOutcome.Replace;
+            }
 
             File.WriteAllBytes(_config.OutputPath, protectedFile ?? file);
 
             Console.WriteLine($"Status of {status} for {_config.FileId}");
 
             return status;
-        }
-
-        private void SendMessage(string status)
-        {
-            var factory = new ConnectionFactory() { HostName = "rabbitmq-service" };
-            using (var connection = factory.CreateConnection())
-            using (var channel = connection.CreateModel())
-            {
-                var headers = new Dictionary<string, object>()
-                {
-                    { "file-id", _config.FileId },
-                    { "file-outcome", status },
-                };
-
-                var replyProps = channel.CreateBasicProperties();
-                replyProps.Headers = headers;
-
-                Console.Write($"ReplyTo: {_config.ReplyTo}, FileId: {_config.FileId}");
-
-                channel.BasicPublish("", _config.ReplyTo, basicProperties: replyProps);
-                Console.WriteLine($"Sent Message, FileId: {_config.FileId}, Outcome: {status}");
-            };
         }
 
         private ContentManagementFlags GetDefaultContentManagement()
