@@ -40,7 +40,6 @@ namespace Service
             {
                 status = FileOutcome.Unmodified;
 
-                // What action do we send here?
                 _messageSender.SendTransactionEvent(new UnmanagedFileTypeActionEvent(status, _config.FileId, timestamp));
             }
             else
