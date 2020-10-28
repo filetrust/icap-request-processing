@@ -10,7 +10,7 @@
         BlockedFileTypeAction = 0x50,
         RebuildCompleted = 0x60,
         AnalysisCompleted = 0x70,
-        NCFSStartedEvent = 0x80,
-        NCFSCompletedEvent = 0x90
+        NcfsStartedEvent = 0x80,
+        NcfsCompletedEvent = 0x90
     }
 }

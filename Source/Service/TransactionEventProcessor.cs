@@ -25,7 +25,6 @@ namespace Service
         public void Process()
         {
             var timestamp = DateTime.UtcNow;
-            //TODO: Replace policy id with id from config map
             _messageSender.SendTransactionEvent(new NewDocumentEvent(Guid.NewGuid().ToString(), RequestMode.Response, _config.FileId, timestamp));
 
             Console.WriteLine($"Using Glasswall Version: {_glasswallVersionService.GetVersion()}");

@@ -1,7 +1,6 @@
 ﻿using Glasswall.Core.Engine.Common.FileProcessing;
 using Glasswall.Core.Engine.Common.PolicyConfig;
 using Glasswall.Core.Engine.Messaging;
-using Service.StoreMessages;
 using System;
 using System.IO;
 

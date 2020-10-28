@@ -1,6 +1,6 @@
 ﻿namespace Service.StoreMessages.Enums
 {
-    public enum NCFSOutcome
+    public enum NcfsOutcome
     {
         Relayed,
         Replaced

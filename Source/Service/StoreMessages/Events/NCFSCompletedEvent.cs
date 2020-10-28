@@ -2,9 +2,9 @@
 
 namespace Service.StoreMessages.Events
 {
-    public class NCFSCompletedEvent : Event
+    public class NcfsCompletedEvent : Event
     {
-        public NCFSCompletedEvent(string ncfsOutcome, string fileId, DateTime timestamp) : base(Enums.EventId.NCFSCompletedEvent, fileId, timestamp)
+        public NcfsCompletedEvent(string ncfsOutcome, string fileId, DateTime timestamp) : base(Enums.EventId.NcfsCompletedEvent, fileId, timestamp)
         {
             this.NCFSOutcome = ncfsOutcome;
         }
