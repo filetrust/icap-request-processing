@@ -1,6 +1,5 @@
 ﻿using Glasswall.CloudSdk.AWS.Rebuild;
 using Microsoft.Extensions.DependencyInjection;
-using System.Threading;
 
 namespace Service
 {
@@ -15,8 +14,8 @@ namespace Service
             var serviceProvider = services.BuildServiceProvider();
 
             // Get Service and call method
-            var service = serviceProvider.GetService<IGlasswallFileProcessor>();
-            service.ProcessFile();
+            var service = serviceProvider.GetService<ITransactionEventProcessor>();
+            service.Process();
         }
     }
 }
