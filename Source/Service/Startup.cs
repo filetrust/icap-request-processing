@@ -23,6 +23,7 @@ namespace Glasswall.CloudSdk.AWS.Rebuild
             Config = new FileProcessorConfig(); 
 
             var builder = new ConfigurationBuilder()
+                .AddJsonFile("config/appsettings.json", optional: true)
                 .AddEnvironmentVariables()
                 .Build();
 
