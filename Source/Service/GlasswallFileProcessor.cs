@@ -39,7 +39,7 @@ namespace Service
         {
             string status;
 
-            var protectedFileResponse = _fileProtector.GetProtectedFile(GetDefaultContentManagement(), fileType, file);
+            var protectedFileResponse = _fileProtector.GetProtectedFile(_config.ContentManagementFlags ?? GetDefaultContentManagement(), fileType, file);
 
             if (!string.IsNullOrWhiteSpace(protectedFileResponse.ErrorMessage))
             {
