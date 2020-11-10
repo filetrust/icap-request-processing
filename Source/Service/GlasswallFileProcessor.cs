@@ -2,7 +2,6 @@
 using Glasswall.Core.Engine.Common.PolicyConfig;
 using Glasswall.Core.Engine.Messaging;
 using System;
-using System.IO;
 
 namespace Service
 {
@@ -30,42 +29,30 @@ namespace Service
             return fileType;
         }
 
-        public string AnalyseFile(string fileType, byte[] file)
+        public string AnalyseFile(byte[] file, string fileType)
         {
             return _fileAnalyser.GetReport(GetDefaultContentManagement(), fileType, file);
         }
 
-        public string RebuildFile(byte[] file, string fileType)
+        public byte[] RebuildFile(byte[] file, string fileType)
         {
-            string status;
-
             var protectedFileResponse = _fileProtector.GetProtectedFile(_config.ContentManagementFlags ?? GetDefaultContentManagement(), fileType, file);
 
-            if (!string.IsNullOrWhiteSpace(protectedFileResponse.ErrorMessage))
+            if (!string.IsNullOrWhiteSpace(protectedFileResponse.ErrorMessage) || protectedFileResponse.ProtectedFile == null)
             {
                 if (protectedFileResponse.IsDisallowed)
-                {
-                    Console.WriteLine($"File {_config.FileId} is disallowed");
-                    status = FileOutcome.Unmodified;
-                }
-                else
-                {
-                    status = FileOutcome.Failed;
-                }
-            }
-            else if (protectedFileResponse.ProtectedFile == null)
-            {
-                status = FileOutcome.Failed;
+                    Console.WriteLine($"File {_config.FileId} is disallowed by Content Management Policy");
+
+                Console.WriteLine($"File {_config.FileId} could not be rebuilt.");
+
+                return null;
             }
             else
             {
-                status = FileOutcome.Replace;
-                File.WriteAllBytes(_config.OutputPath, protectedFileResponse.ProtectedFile);
+                Console.WriteLine($"File {_config.FileId} successfully rebuilt.");
+
+                return protectedFileResponse.ProtectedFile;
             }
-
-            Console.WriteLine($"Status of {status} for {_config.FileId}");
-
-            return status;
         }
 
         private ContentManagementFlags GetDefaultContentManagement()

@@ -41,6 +41,7 @@ namespace Glasswall.CloudSdk.AWS.Rebuild
             services.AddSingleton<ITransactionEventProcessor, TransactionEventProcessor>();
             services.AddSingleton<IOutcomeSender, OutcomeSender>();
             services.AddSingleton<ITransactionEventSender, TransactionEventSender>();
+            services.AddSingleton<IFileManager, LocalFileManager>();
             services.AddSingleton(Config);
 
             var p = (int)Environment.OSVersion.Platform;
