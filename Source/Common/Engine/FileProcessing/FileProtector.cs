@@ -1,11 +1,9 @@
 ﻿using System;
-using System.IO;
 using System.Linq;
 using Glasswall.Core.Engine.Common;
 using Glasswall.Core.Engine.Common.FileProcessing;
 using Glasswall.Core.Engine.Common.GlasswallEngineLibrary;
 using Glasswall.Core.Engine.Common.PolicyConfig;
-using Microsoft.Extensions.Logging;
 
 namespace Glasswall.Core.Engine.FileProcessing
 {
@@ -32,8 +30,6 @@ namespace Glasswall.Core.Engine.FileProcessing
                 response.Outcome = configurationOutcome;
                 return response;
             }
-
-            var version = _glasswallFileOperations.GetLibraryVersion();
 
             var engineOutcome = _glasswallFileOperations.ProtectFile(fileBytes, fileType, out var protectedFile);
             response.Outcome = engineOutcome;

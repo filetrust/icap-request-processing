@@ -43,7 +43,7 @@ namespace Service
                 if (protectedFileResponse.IsDisallowed)
                     Console.WriteLine($"File {_config.FileId} is disallowed by Content Management Policy");
 
-                Console.WriteLine($"File {_config.FileId} could not be rebuilt.");
+                Console.WriteLine($"File {_config.FileId} could not be rebuilt: {protectedFileResponse.ErrorMessage}.");
 
                 return null;
             }

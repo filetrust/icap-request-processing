@@ -8,10 +8,9 @@ using Glasswall.Core.Engine.Common.PolicyConfig;
 using Glasswall.Core.Engine.FileProcessing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Service;
 using Service.Messaging;
 
-namespace Glasswall.CloudSdk.AWS.Rebuild
+namespace Service
 {
     [ExcludeFromCodeCoverage]
     public class Startup
@@ -32,16 +31,16 @@ namespace Glasswall.CloudSdk.AWS.Rebuild
 
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddSingleton<IGlasswallVersionService, GlasswallVersionService>();
-            services.AddSingleton<IFileTypeDetector, FileTypeDetector>();
-            services.AddSingleton<IFileProtector, FileProtector>();
-            services.AddSingleton<IFileAnalyser, FileAnalyser>();
-            services.AddSingleton<IAdaptor<ContentManagementFlags, string>, GlasswallConfigurationAdaptor>();
-            services.AddSingleton<IGlasswallFileProcessor, GlasswallFileProcessor>();
-            services.AddSingleton<ITransactionEventProcessor, TransactionEventProcessor>();
-            services.AddSingleton<IOutcomeSender, OutcomeSender>();
-            services.AddSingleton<ITransactionEventSender, TransactionEventSender>();
-            services.AddSingleton<IFileManager, LocalFileManager>();
+            services.AddTransient<IGlasswallVersionService, GlasswallVersionService>();
+            services.AddTransient<IFileTypeDetector, FileTypeDetector>();
+            services.AddTransient<IFileProtector, FileProtector>();
+            services.AddTransient<IFileAnalyser, FileAnalyser>();
+            services.AddTransient<IAdaptor<ContentManagementFlags, string>, GlasswallConfigurationAdaptor>();
+            services.AddTransient<IGlasswallFileProcessor, GlasswallFileProcessor>();
+            services.AddTransient<ITransactionEventProcessor, TransactionEventProcessor>();
+            services.AddScoped<IOutcomeSender, OutcomeSender>();
+            services.AddScoped<ITransactionEventSender, TransactionEventSender>();
+            services.AddTransient<IFileManager, LocalFileManager>();
             services.AddSingleton(Config);
 
             var p = (int)Environment.OSVersion.Platform;
