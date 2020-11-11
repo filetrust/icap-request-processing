@@ -1,5 +1,4 @@
-﻿using Glasswall.CloudSdk.AWS.Rebuild;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 
 namespace Service
 {
@@ -14,8 +13,11 @@ namespace Service
             var serviceProvider = services.BuildServiceProvider();
 
             // Get Service and call method
-            var service = serviceProvider.GetService<ITransactionEventProcessor>();
-            service.Process();
+            using (var scope = serviceProvider.CreateScope())
+            {
+                var service = scope.ServiceProvider.GetService<ITransactionEventProcessor>();
+                service.Process();
+            }
         }
     }
 }
