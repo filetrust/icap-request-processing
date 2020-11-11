@@ -53,11 +53,9 @@ namespace Service.Messaging
 
             var replyProps = _channel.CreateBasicProperties();
             replyProps.Headers = headers;
-
-            Console.Write($"ReplyTo: {replyTo}, FileId: {fileId}");
-
             _channel.BasicPublish("", replyTo, basicProperties: replyProps);
-            Console.WriteLine($"Sent Message, FileId: {fileId}, Outcome: {status}");
+
+            Console.WriteLine($"Sent Message, ReplyTo: { replyTo}, FileId: {fileId}, Outcome: {status}");
         }
     }
 }
