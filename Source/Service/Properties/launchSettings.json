@@ -3,8 +3,10 @@
     "Service": {
       "commandName": "Project",
       "environmentVariables": {
-        "OUTPUT_PATH": "C:\\output\\cryptography_engineering_design_principles_and_practical_applications.pdf",
-        "INPUT_PATH": "C:\\input\\cryptography_engineering_design_principles_and_practical_applications.pdf"
+        "OutputPath": "C:\\test-data-output\\cryptography_engineering_design_principles_and_practical_applications.pdf",
+        "FileId": "testststs",
+        "ProcessingTimeoutDuration": "00:00:10",
+        "InputPath": "C:\\test-data\\cryptography_engineering_design_principles_and_practical_applications.pdf"
       }
     },
     "Docker": {

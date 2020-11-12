@@ -10,6 +10,7 @@ namespace Service
         public string InputPath { get; }
         public string OutputPath { get; }
         public string ReplyTo { get; }
+        public TimeSpan ProcessingTimeoutDuration { get; set; }
         public Guid PolicyId { get; }
         public ContentManagementFlags ContentManagementFlags { get; }
         public NcfsOption UnprocessableFileTypeAction { get; }

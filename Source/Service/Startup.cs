@@ -38,8 +38,8 @@ namespace Service
             services.AddTransient<IAdaptor<ContentManagementFlags, string>, GlasswallConfigurationAdaptor>();
             services.AddTransient<IGlasswallFileProcessor, GlasswallFileProcessor>();
             services.AddTransient<ITransactionEventProcessor, TransactionEventProcessor>();
-            services.AddScoped<IOutcomeSender, OutcomeSender>();
-            services.AddScoped<ITransactionEventSender, TransactionEventSender>();
+            //services.AddScoped<IOutcomeSender, OutcomeSender>();
+            //services.AddScoped<ITransactionEventSender, TransactionEventSender>();
             services.AddTransient<IFileManager, LocalFileManager>();
             services.AddSingleton(Config);
 

@@ -1,10 +1,11 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using System.Threading.Tasks;
 
 namespace Service
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             var services = new ServiceCollection();
 
@@ -16,7 +17,7 @@ namespace Service
             using (var scope = serviceProvider.CreateScope())
             {
                 var service = scope.ServiceProvider.GetService<ITransactionEventProcessor>();
-                service.Process();
+                await service.Process();
             }
         }
     }

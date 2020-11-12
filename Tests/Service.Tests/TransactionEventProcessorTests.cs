@@ -7,6 +7,7 @@ using Service.Messaging;
 using Service.StoreMessages.Enums;
 using System;
 using System.Text;
+using System.Threading;
 
 namespace Service.Tests
 {
@@ -35,6 +36,7 @@ namespace Service.Tests
                 _mockConfig = new Mock<IFileProcessorConfig>();
 
                 _mockFileManager.Setup(s => s.ReadFile(It.IsAny<string>())).Returns(Encoding.UTF8.GetBytes("Hello World"));
+                _mockConfig.SetupGet(s => s.ProcessingTimeoutDuration).Returns(new TimeSpan(0, 5, 0));
 
                 _transactionEventProcessor = new TransactionEventProcessor(
                     _mockGlasswallFileProcessor.Object,
