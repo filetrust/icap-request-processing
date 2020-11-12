@@ -20,7 +20,6 @@ namespace Service
         private readonly IFileProcessorConfig _config;
 
         private readonly TimeSpan _processingTimeoutDuration;
-        private readonly CancellationTokenSource _processingCancellationTokenSource;
 
         public TransactionEventProcessor(IGlasswallFileProcessor fileProcessor, IGlasswallVersionService versionService, IFileManager fileManager, IFileProcessorConfig config)
         {
@@ -32,44 +31,58 @@ namespace Service
             _config = config ?? throw new ArgumentNullException(nameof(config));
 
             _processingTimeoutDuration = _config.ProcessingTimeoutDuration;
-            _processingCancellationTokenSource = new CancellationTokenSource(_processingTimeoutDuration);
         }
 
-        public async Task ProcessWithCancel(CancellationToken token)
-        {
-            var taskCompletionSource = new TaskCompletionSource<int>();
+        //public async Task ProcessWithCancel(CancellationToken token)
+        //{
+        //    var taskCompletionSource = new TaskCompletionSource<int>();
 
-            token.Register(() =>
-            {
-                taskCompletionSource.TrySetCanceled();
-            });
+        //    token.Register(() =>
+        //    {
+        //        taskCompletionSource.TrySetCanceled();
+        //    });
 
-            var task = ProcessTransaction();
+        //    var task = ProcessTransaction();
 
-            var completedTask = await Task.WhenAny(task, taskCompletionSource.Task);
+        //    var completedTask = await Task.WhenAny(task, taskCompletionSource.Task);
 
-            return;
-        }
+        //    return;
+        //}
+
+        //public async Task Process()
+        //{
+        //    using (var cancellationTokenSource = new CancellationTokenSource(_processingTimeoutDuration))
+        //    {
+        //        try
+        //        {
+        //            await ProcessWithCancel(cancellationTokenSource.Token);
+        //        }
+        //        catch (TaskCanceledException tce)
+        //        {
+        //            Console.WriteLine($"Error: Processing Timeout 'input' {_config.FileId} exceeded {_processingTimeoutDuration.TotalSeconds}s");
+        //            ClearRebuiltStore(_config.OutputPath);
+        //        }
+        //        catch (Exception e)
+        //        {
+        //            Console.WriteLine($"Error: Processing 'input' {_config.FileId}. Exception: {e.Message}");
+        //            ClearRebuiltStore(_config.OutputPath);
+        //        }
+        //    }
+        //}
 
         public async Task Process()
         {
-            using (var cancellationTokenSource = new CancellationTokenSource())
+            var task = Task.Run(() =>
+             {
+                 return ProcessTransaction();
+             });
+
+            bool isCompletedSuccessfully = task.Wait(_processingTimeoutDuration);
+
+            if (!isCompletedSuccessfully)
             {
-                try
-                {
-                    cancellationTokenSource.CancelAfter(_processingTimeoutDuration);
-                    await ProcessWithCancel(cancellationTokenSource.Token);
-                }
-                catch (TaskCanceledException tce)
-                {
-                    Console.WriteLine($"Error: Processing Timeout 'input' {_config.FileId} exceeded {_processingTimeoutDuration.TotalSeconds}s");
-                    ClearRebuiltStore(_config.OutputPath);
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine($"Error: Processing 'input' {_config.FileId}. Exception: {e.Message}");
-                    ClearRebuiltStore(_config.OutputPath);
-                }
+                Console.WriteLine($"Error: Processing 'input' {_config.FileId} exceeded {_processingTimeoutDuration}s");
+                ClearRebuiltStore(_config.OutputPath);
             }
         }
 

@@ -8,6 +8,7 @@ using Service.StoreMessages.Enums;
 using System;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Service.Tests
 {
@@ -36,13 +37,13 @@ namespace Service.Tests
                 _mockConfig = new Mock<IFileProcessorConfig>();
 
                 _mockFileManager.Setup(s => s.ReadFile(It.IsAny<string>())).Returns(Encoding.UTF8.GetBytes("Hello World"));
-                _mockConfig.SetupGet(s => s.ProcessingTimeoutDuration).Returns(new TimeSpan(0, 5, 0));
+                _mockConfig.SetupGet(s => s.ProcessingTimeoutDuration).Returns(TimeSpan.FromSeconds(1));
 
                 _transactionEventProcessor = new TransactionEventProcessor(
                     _mockGlasswallFileProcessor.Object,
                     _mockGlasswallVersionService.Object,
-                    _mockOutcomeSender.Object,
-                    _mockTransactionEventSender.Object,
+                //    _mockOutcomeSender.Object,
+                //    _mockTransactionEventSender.Object,
                     _mockFileManager.Object,
                     _mockConfig.Object);
             }
@@ -102,6 +103,22 @@ namespace Service.Tests
                     It.Is<string>(status => status == expected),
                     It.IsAny<string>(),
                     It.IsAny<string>()));
+            }
+
+            [Test]
+            public void Long_Running_Process_Should_Clear_Output_Store()
+            {
+                _mockGlasswallFileProcessor.Setup(s => s.GetFileType(It.IsAny<byte[]>())).Returns(new FileTypeDetectionResponse(FileType.Doc));
+                _mockGlasswallFileProcessor.Setup(s => s.RebuildFile(It.IsAny<byte[]>(), It.IsAny<string>()))
+                    .Callback((byte[] f, string t) => Task.Delay(TimeSpan.FromMinutes(10)).Wait());
+                _mockFileManager.Setup(m => m.DeleteFile(It.IsAny<string>()));
+                _mockFileManager.Setup(m => m.FileExists(It.IsAny<string>())).Returns(true);
+
+                _mockConfig.SetupGet(s => s.PolicyId).Returns(Guid.NewGuid());
+
+                _transactionEventProcessor.Process();
+
+                _mockFileManager.Verify(m => m.DeleteFile(It.IsAny<string>()), Times.Once, "Store should be cleared in event of long running process");
             }
         }
     }
