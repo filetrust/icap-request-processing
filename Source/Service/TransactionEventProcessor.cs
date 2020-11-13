@@ -31,7 +31,7 @@ namespace Service
             _processingTimeoutDuration = _config.ProcessingTimeoutDuration;
         }
 
-        public async Task Process()
+        public void Process()
         {
             var task = Task.Run(() =>
              {

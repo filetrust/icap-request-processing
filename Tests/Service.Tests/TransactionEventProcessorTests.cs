@@ -50,14 +50,14 @@ namespace Service.Tests
 
             [TestCase(NcfsOption.Relay, FileOutcome.Unmodified)]
             [TestCase(NcfsOption.Block, FileOutcome.Replace)]
-            public async Task Correct_Outcome_Is_Sent_When_FileType_Is_Unknown(NcfsOption unprocessableAction, string expected)
+            public void Correct_Outcome_Is_Sent_When_FileType_Is_Unknown(NcfsOption unprocessableAction, string expected)
             {
                 // Arrange
                 _mockGlasswallFileProcessor.Setup(s => s.GetFileType(It.IsAny<byte[]>())).Returns(new FileTypeDetectionResponse(FileType.Unknown));
                 _mockConfig.SetupGet(s => s.UnprocessableFileTypeAction).Returns(unprocessableAction);
 
                 // Act
-                await _transactionEventProcessor.Process();
+                _transactionEventProcessor.Process();
 
                 // Assert
                 _mockOutcomeSender.Verify(s => s.Send(
@@ -68,7 +68,7 @@ namespace Service.Tests
 
             [TestCase(NcfsOption.Relay, FileOutcome.Unmodified)]
             [TestCase(NcfsOption.Block, FileOutcome.Replace)]
-            public async Task Correct_Outcome_Is_Sent_When_File_Is_Not_Rebuilt(NcfsOption blockAction, string expected)
+            public void Correct_Outcome_Is_Sent_When_File_Is_Not_Rebuilt(NcfsOption blockAction, string expected)
             {
                 // Arrange
                 _mockGlasswallFileProcessor.Setup(s => s.GetFileType(It.IsAny<byte[]>())).Returns(new FileTypeDetectionResponse(FileType.Doc));
@@ -76,7 +76,7 @@ namespace Service.Tests
                 _mockConfig.SetupGet(s => s.GlasswallBlockedFilesAction).Returns(blockAction);
 
                 // Act
-                await _transactionEventProcessor.Process();
+                _transactionEventProcessor.Process();
 
                 // Assert
                 _mockOutcomeSender.Verify(s => s.Send(
@@ -86,7 +86,7 @@ namespace Service.Tests
             }
 
             [Test]
-            public async Task Correct_Outcome_Is_Sent_When_File_Is_Rebuilt()
+            public void Correct_Outcome_Is_Sent_When_File_Is_Rebuilt()
             {
                 // Arrange
                 const string expected = FileOutcome.Replace;
@@ -96,7 +96,7 @@ namespace Service.Tests
                 _mockConfig.SetupGet(s => s.PolicyId).Returns(Guid.NewGuid());
 
                 // Act
-                await _transactionEventProcessor.Process();
+                _transactionEventProcessor.Process();
 
                 // Assert
                 _mockOutcomeSender.Verify(s => s.Send(
@@ -106,7 +106,7 @@ namespace Service.Tests
             }
 
             [Test]
-            public async Task Long_Running_Process_Should_Clear_Output_Store()
+            public void Long_Running_Process_Should_Clear_Output_Store()
             {
                 _mockGlasswallFileProcessor.Setup(s => s.GetFileType(It.IsAny<byte[]>())).Returns(new FileTypeDetectionResponse(FileType.Doc));
                 _mockGlasswallFileProcessor.Setup(s => s.RebuildFile(It.IsAny<byte[]>(), It.IsAny<string>()))
@@ -116,13 +116,13 @@ namespace Service.Tests
 
                 _mockConfig.SetupGet(s => s.PolicyId).Returns(Guid.NewGuid());
 
-                 await _transactionEventProcessor.Process();
+                 _transactionEventProcessor.Process();
 
                 _mockFileManager.Verify(m => m.DeleteFile(It.IsAny<string>()), Times.Once, "Store should be cleared in event of long running process");
             }
 
             [Test]
-            public async Task Exception_Thrown_In__Process_Should_Clear_Output_Store()
+            public void Exception_Thrown_In__Process_Should_Clear_Output_Store()
             {
                 _mockGlasswallFileProcessor.Setup(s => s.GetFileType(It.IsAny<byte[]>())).Returns(new FileTypeDetectionResponse(FileType.Doc));
                 _mockGlasswallFileProcessor.Setup(s => s.RebuildFile(It.IsAny<byte[]>(), It.IsAny<string>()))
@@ -132,7 +132,7 @@ namespace Service.Tests
 
                 _mockConfig.SetupGet(s => s.PolicyId).Returns(Guid.NewGuid());
 
-                await _transactionEventProcessor.Process();
+                _transactionEventProcessor.Process();
 
                 _mockFileManager.Verify(m => m.DeleteFile(It.IsAny<string>()), Times.Once, "Store should be cleared in event of long running process");
             }

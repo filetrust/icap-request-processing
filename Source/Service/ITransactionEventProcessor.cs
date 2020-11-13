@@ -4,6 +4,6 @@ namespace Service
 {
     public interface ITransactionEventProcessor
     {
-        Task Process();
+        void Process();
     }
 }

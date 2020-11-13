@@ -5,7 +5,7 @@ namespace Service
 {
     public class Program
     {
-        public static async Task Main(string[] args)
+        public static void Main(string[] args)
         {
             var services = new ServiceCollection();
 
@@ -17,7 +17,7 @@ namespace Service
             using (var scope = serviceProvider.CreateScope())
             {
                 var service = scope.ServiceProvider.GetService<ITransactionEventProcessor>();
-                await service.Process();
+                service.Process();
             }
         }
     }
