@@ -72,7 +72,7 @@ namespace Service
             {
                 status = GetUnmanagedAction();
 
-                 _transactionEventSender.Send(new UnmanagedFileTypeActionEvent(status, _config.FileId, timestamp));
+                _transactionEventSender.Send(new UnmanagedFileTypeActionEvent(status, _config.FileId, timestamp));
             }
             else
             {
