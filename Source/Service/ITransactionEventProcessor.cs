@@ -1,6 +1,4 @@
-﻿using System.Threading.Tasks;
-
-namespace Service
+﻿namespace Service
 {
     public interface ITransactionEventProcessor
     {
