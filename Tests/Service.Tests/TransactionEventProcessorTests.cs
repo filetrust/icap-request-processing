@@ -120,6 +120,22 @@ namespace Service.Tests
 
                 _mockFileManager.Verify(m => m.DeleteFile(It.IsAny<string>()), Times.Once, "Store should be cleared in event of long running process");
             }
+
+            [Test]
+            public async Task Exception_Thrown_In__Process_Should_Clear_Output_Store()
+            {
+                _mockGlasswallFileProcessor.Setup(s => s.GetFileType(It.IsAny<byte[]>())).Returns(new FileTypeDetectionResponse(FileType.Doc));
+                _mockGlasswallFileProcessor.Setup(s => s.RebuildFile(It.IsAny<byte[]>(), It.IsAny<string>()))
+                    .Throws(new Exception());
+                _mockFileManager.Setup(m => m.DeleteFile(It.IsAny<string>()));
+                _mockFileManager.Setup(m => m.FileExists(It.IsAny<string>())).Returns(true);
+
+                _mockConfig.SetupGet(s => s.PolicyId).Returns(Guid.NewGuid());
+
+                await _transactionEventProcessor.Process();
+
+                _mockFileManager.Verify(m => m.DeleteFile(It.IsAny<string>()), Times.Once, "Store should be cleared in event of long running process");
+            }
         }
     }
 }

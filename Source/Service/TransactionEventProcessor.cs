@@ -38,11 +38,19 @@ namespace Service
                  return ProcessTransaction();
              });
 
-            bool isCompletedSuccessfully = task.Wait(_processingTimeoutDuration);
-
-            if (!isCompletedSuccessfully)
+            try
             {
-                Console.WriteLine($"Error: Processing 'input' {_config.FileId} exceeded {_processingTimeoutDuration}s");
+                bool isCompletedSuccessfully = task.Wait(_processingTimeoutDuration);
+
+                if (!isCompletedSuccessfully)
+                {
+                    Console.WriteLine($"Error: Processing 'input' {_config.FileId} exceeded {_processingTimeoutDuration}s");
+                    ClearRebuiltStore(_config.OutputPath);
+                }
+            }
+            catch (Exception e) 
+            {
+                Console.WriteLine($"Error: Processing 'input' {_config.FileId} threw exception {e.Message}");
                 ClearRebuiltStore(_config.OutputPath);
             }
         }
