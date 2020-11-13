@@ -4,7 +4,7 @@ using Service.StoreMessages.Enums;
 using Service.StoreMessages.Events;
 using Service.Messaging;
 using System;
-using System.IO;
+using System.Threading.Tasks;
 
 namespace Service
 {
@@ -17,6 +17,8 @@ namespace Service
         private readonly IFileManager _fileManager;
         private readonly IFileProcessorConfig _config;
 
+        private readonly TimeSpan _processingTimeoutDuration;
+
         public TransactionEventProcessor(IGlasswallFileProcessor fileProcessor, IGlasswallVersionService versionService, IOutcomeSender outcomeSender, ITransactionEventSender transactionEventSender, IFileManager fileManager, IFileProcessorConfig config)
         {
             _fileProcessor = fileProcessor ?? throw new ArgumentNullException(nameof(fileProcessor));
@@ -25,9 +27,35 @@ namespace Service
             _transactionEventSender = transactionEventSender ?? throw new ArgumentNullException(nameof(transactionEventSender));
             _fileManager = fileManager ?? throw new ArgumentNullException(nameof(fileManager));
             _config = config ?? throw new ArgumentNullException(nameof(config));
+
+            _processingTimeoutDuration = _config.ProcessingTimeoutDuration;
         }
 
         public void Process()
+        {
+            var task = Task.Run(() =>
+             {
+                 return ProcessTransaction();
+             });
+
+            try
+            {
+                bool isCompletedSuccessfully = task.Wait(_processingTimeoutDuration);
+
+                if (!isCompletedSuccessfully)
+                {
+                    Console.WriteLine($"Error: Processing 'input' {_config.FileId} exceeded {_processingTimeoutDuration}s");
+                    ClearRebuiltStore(_config.OutputPath);
+                }
+            }
+            catch (Exception e) 
+            {
+                Console.WriteLine($"Error: Processing 'input' {_config.FileId} threw exception {e.Message}");
+                ClearRebuiltStore(_config.OutputPath);
+            }
+        }
+
+        private Task ProcessTransaction()
         {
             var timestamp = DateTime.UtcNow;
             _transactionEventSender.Send(new NewDocumentEvent(_config.PolicyId.ToString(), RequestMode.Response, _config.FileId, timestamp));
@@ -52,7 +80,7 @@ namespace Service
                 _transactionEventSender.Send(new AnalysisCompletedEvent(report, _config.FileId, timestamp));
 
                 _transactionEventSender.Send(new RebuildStartingEvent(_config.FileId, timestamp));
-                
+
                 var rebuiltFile = _fileProcessor.RebuildFile(file, fileType.FileTypeName);
 
                 if (rebuiltFile == null)
@@ -70,6 +98,16 @@ namespace Service
             }
 
             _outcomeSender.Send(status, _config.FileId, _config.ReplyTo);
+
+            return Task.CompletedTask;
+        }
+
+        private void ClearRebuiltStore(string path)
+        {
+            if (_fileManager.FileExists(path))
+            {
+                _fileManager.DeleteFile(path);
+            }
         }
 
         private string GetUnmanagedAction()
