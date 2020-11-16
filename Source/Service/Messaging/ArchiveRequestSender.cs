@@ -6,23 +6,22 @@ namespace Service.Messaging
 {
     public class ArchiveRequestSender : IArchiveRequestSender, IDisposable
     {
-        private const string HostName = "localhost";
+        private const string HostName = "rabbitmq-service";
         private const string Exchange = "adaptation-exchange";
         private const string RoutingKey = "archive-adaptation-request";
 
         private bool disposedValue;
 
-        private readonly IModel _channel;
-        private readonly IConnection _connection;
-
-        public ArchiveRequestSender()
+        private readonly Lazy<IConnection> _lazyConnection = new Lazy<IConnection>(() =>
         {
             var connectionFactory = new ConnectionFactory() { HostName = HostName };
-            _connection = connectionFactory.CreateConnection();
-            _channel = _connection.CreateModel();
-
+            var connection = connectionFactory.CreateConnection();
             Console.WriteLine($"Connection established to {HostName}");
-        }
+            return connection;
+        });
+
+        private IModel _channel => _connection.CreateModel();
+        private IConnection _connection => _lazyConnection.Value;
 
         protected virtual void Dispose(bool disposing)
         {

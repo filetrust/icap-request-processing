@@ -108,6 +108,33 @@ namespace Service.Tests
             }
 
             [Test]
+            public void ArchiveRequest_Is_Sent_When_FileType_Is_Zip()
+            {
+                // Arrange
+                const string expectedFileId = "FileId1";
+                const string expectedReplyTo = "ReplyToMe";
+                const string expectedInput = "InputPathHere";
+                const string expectedOutput = "OutputPathHere";
+
+                _mockGlasswallFileProcessor.Setup(s => s.GetFileType(It.IsAny<byte[]>())).Returns(new FileTypeDetectionResponse(FileType.Zip));
+                _mockConfig.SetupGet(s => s.PolicyId).Returns(Guid.NewGuid());
+                _mockConfig.SetupGet(s => s.FileId).Returns(expectedFileId);
+                _mockConfig.SetupGet(s => s.InputPath).Returns(expectedInput);
+                _mockConfig.SetupGet(s => s.OutputPath).Returns(expectedOutput);
+                _mockConfig.SetupGet(s => s.ReplyTo).Returns(expectedReplyTo);
+
+                // Act
+                _transactionEventProcessor.Process();
+
+                // Assert
+                _mockArchiveRequestSender.Verify(s => s.Send(
+                    It.Is<string>(id => id == expectedFileId),
+                    It.Is<string>(input => input == expectedInput),
+                    It.Is<string>(output => output == expectedOutput),
+                    It.Is<string>(replyTo => replyTo == expectedReplyTo)));
+            }
+
+            [Test]
             public void Long_Running_Process_Should_Clear_Output_Store()
             {
                 _mockGlasswallFileProcessor.Setup(s => s.GetFileType(It.IsAny<byte[]>())).Returns(new FileTypeDetectionResponse(FileType.Doc));
@@ -124,7 +151,7 @@ namespace Service.Tests
             }
 
             [Test]
-            public void Exception_Thrown_In__Process_Should_Clear_Output_Store()
+            public void Exception_Thrown_In_Process_Should_Clear_Output_Store()
             {
                 _mockGlasswallFileProcessor.Setup(s => s.GetFileType(It.IsAny<byte[]>())).Returns(new FileTypeDetectionResponse(FileType.Doc));
                 _mockGlasswallFileProcessor.Setup(s => s.RebuildFile(It.IsAny<byte[]>(), It.IsAny<string>()))
