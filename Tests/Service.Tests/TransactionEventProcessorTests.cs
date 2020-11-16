@@ -20,6 +20,7 @@ namespace Service.Tests
             private Mock<IGlasswallVersionService> _mockGlasswallVersionService;
             private Mock<IOutcomeSender> _mockOutcomeSender;
             private Mock<ITransactionEventSender> _mockTransactionEventSender;
+            private Mock<IArchiveRequestSender> _mockArchiveRequestSender;
             private Mock<IFileManager> _mockFileManager;
             private Mock<IFileProcessorConfig> _mockConfig;
 
@@ -32,6 +33,7 @@ namespace Service.Tests
                 _mockGlasswallVersionService = new Mock<IGlasswallVersionService>();
                 _mockOutcomeSender = new Mock<IOutcomeSender>();
                 _mockTransactionEventSender = new Mock<ITransactionEventSender>();
+                _mockArchiveRequestSender = new Mock<IArchiveRequestSender>();
                 _mockFileManager = new Mock<IFileManager>();
                 _mockConfig = new Mock<IFileProcessorConfig>();
 
@@ -43,6 +45,7 @@ namespace Service.Tests
                     _mockGlasswallVersionService.Object,
                     _mockOutcomeSender.Object,
                     _mockTransactionEventSender.Object,
+                    _mockArchiveRequestSender.Object,
                     _mockFileManager.Object,
                     _mockConfig.Object);
             }
