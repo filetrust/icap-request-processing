@@ -9,7 +9,6 @@ namespace Service
         public string FileId { get; set; }
         public string InputPath { get; set; }
         public string OutputPath { get; set; }
-        public string AmqpURL { get; set; }
         public string ReplyTo { get; set; }
         public TimeSpan ProcessingTimeoutDuration { get; set; }
         public Guid PolicyId { get; set; }
