@@ -40,6 +40,7 @@ namespace Service
             services.AddTransient<ITransactionEventProcessor, TransactionEventProcessor>();
             services.AddScoped<IOutcomeSender, OutcomeSender>();
             services.AddScoped<ITransactionEventSender, TransactionEventSender>();
+            services.AddScoped<IArchiveRequestSender, ArchiveRequestSender>();
             services.AddTransient<IFileManager, LocalFileManager>();
             services.AddSingleton(Config);
 
