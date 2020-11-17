@@ -21,5 +21,7 @@ namespace Service
         public string MessageBrokerPassword { get; }
         public string AdaptationRequestQueueHostname { get; }
         public int AdaptationRequestQueuePort { get; }
+        public string ArchiveAdaptationRequestQueueHostname { get; }
+        public int ArchiveAdaptationRequestQueuePort { get; }
     }
 }

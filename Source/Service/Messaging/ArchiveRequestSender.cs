@@ -12,15 +12,19 @@ namespace Service.Messaging
         private readonly IConnectionFactory _connectionFactory;
         private IConnection _connection;
         private IModel _channel;
-        private readonly string _amqpURL;
 
         private bool disposedValue;
 
         public ArchiveRequestSender(IFileProcessorConfig fileProcessorConfig)
         {
             if (fileProcessorConfig == null) throw new ArgumentNullException(nameof(fileProcessorConfig));
-            _amqpURL = fileProcessorConfig.AmqpURL;
-            _connectionFactory = new ConnectionFactory() { Uri = new Uri(_amqpURL) };
+            _connectionFactory = new ConnectionFactory()
+            {
+                HostName = fileProcessorConfig.ArchiveAdaptationRequestQueueHostname,
+                Port = fileProcessorConfig.ArchiveAdaptationRequestQueuePort,
+                UserName = fileProcessorConfig.MessageBrokerUser,
+                Password = fileProcessorConfig.MessageBrokerPassword
+            };
         }
 
         protected virtual void Dispose(bool disposing)
@@ -48,8 +52,6 @@ namespace Service.Messaging
         {
             _connection = _connectionFactory.CreateConnection();
             _channel = _connection.CreateModel();
-
-            Console.WriteLine($"Connection established to '{ _amqpURL}' for FileId: {fileId} for Archive Request");
 
             var headers = new Dictionary<string, object>()
                 {
