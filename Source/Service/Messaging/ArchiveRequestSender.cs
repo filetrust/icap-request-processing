@@ -6,22 +6,22 @@ namespace Service.Messaging
 {
     public class ArchiveRequestSender : IArchiveRequestSender, IDisposable
     {
-        private const string HostName = "rabbitmq-service";
         private const string Exchange = "adaptation-exchange";
         private const string RoutingKey = "archive-adaptation-request";
 
+        private readonly IConnectionFactory _connectionFactory;
+        private IConnection _connection;
+        private IModel _channel;
+        private readonly string _amqpURL;
+
         private bool disposedValue;
 
-        private readonly Lazy<IConnection> _lazyConnection = new Lazy<IConnection>(() =>
+        public ArchiveRequestSender(IFileProcessorConfig fileProcessorConfig)
         {
-            var connectionFactory = new ConnectionFactory() { HostName = HostName };
-            var connection = connectionFactory.CreateConnection();
-            Console.WriteLine($"Connection established to {HostName}");
-            return connection;
-        });
-
-        private IModel _channel => _connection.CreateModel();
-        private IConnection _connection => _lazyConnection.Value;
+            if (fileProcessorConfig == null) throw new ArgumentNullException(nameof(fileProcessorConfig));
+            _amqpURL = fileProcessorConfig.AmqpURL;
+            _connectionFactory = new ConnectionFactory() { Uri = new Uri(_amqpURL) };
+        }
 
         protected virtual void Dispose(bool disposing)
         {
@@ -46,6 +46,11 @@ namespace Service.Messaging
 
         public void Send(string fileId, string sourceLocation, string rebuiltLocation, string replyTo)
         {
+            _connection = _connectionFactory.CreateConnection();
+            _channel = _connection.CreateModel();
+
+            Console.WriteLine($"Connection established to '{ _amqpURL}' for FileId: {fileId} for Archive Request");
+
             var headers = new Dictionary<string, object>()
                 {
                     { "archive-file-id", fileId },
