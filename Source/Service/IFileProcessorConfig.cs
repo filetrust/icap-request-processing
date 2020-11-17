@@ -23,5 +23,7 @@ namespace Service
         public int AdaptationRequestQueuePort { get; }
         public string ArchiveAdaptationRequestQueueHostname { get; }
         public int ArchiveAdaptationRequestQueuePort { get; }
+        public string TransactionEventQueueHostname { get; }
+        public int TransactionEventQueuePort { get; }
     }
 }

@@ -18,11 +18,17 @@ namespace Service.Messaging
         public TransactionEventSender(IFileProcessorConfig fileProcessorConfig)
         {
             if (fileProcessorConfig == null) throw new ArgumentNullException(nameof(fileProcessorConfig));
-            var connectionFactory = new ConnectionFactory() { Uri = new Uri(fileProcessorConfig.AmqpURL) };
+            var connectionFactory = new ConnectionFactory()
+            {
+                HostName = fileProcessorConfig.ArchiveAdaptationRequestQueueHostname,
+                Port = fileProcessorConfig.ArchiveAdaptationRequestQueuePort,
+                UserName = fileProcessorConfig.MessageBrokerUser,
+                Password = fileProcessorConfig.MessageBrokerPassword
+            };
             _connection = connectionFactory.CreateConnection();
             _channel = _connection.CreateModel();
 
-            Console.WriteLine($"TransactionEventSender Connection established to {fileProcessorConfig.AmqpURL}");
+            Console.WriteLine($"TransactionEventSender Connection established to {fileProcessorConfig.ArchiveAdaptationRequestQueueHostname}");
         }
 
         protected virtual void Dispose(bool disposing)

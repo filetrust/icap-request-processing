@@ -23,7 +23,7 @@ namespace Service.Messaging
             _connection = connectionFactory.CreateConnection();
             _channel = _connection.CreateModel();
 
-            Console.WriteLine($"OutcomeSender Connection established to {fileProcessorConfig.AmqpURL}");
+            Console.WriteLine($"OutcomeSender Connection established to {fileProcessorConfig.AdaptationRequestQueueHostname}");
         }
 
         protected virtual void Dispose(bool disposing)
