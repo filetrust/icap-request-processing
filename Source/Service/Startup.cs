@@ -15,7 +15,7 @@ namespace Service
     [ExcludeFromCodeCoverage]
     public class Startup
     {
-        IFileProcessorConfig Config { get; }
+        FileProcessorConfig Config { get; }
 
         public Startup()
         {
@@ -27,6 +27,16 @@ namespace Service
                 .Build();
 
             builder.Bind(Config);
+
+            if (String.IsNullOrEmpty(Config.MessageBrokerUser))
+            {
+                Config.MessageBrokerUser = "guest";
+            }
+
+            if (String.IsNullOrEmpty(Config.MessageBrokerPassword))
+            {
+                Config.MessageBrokerPassword = "guest";
+            }
         }
 
         public void ConfigureServices(IServiceCollection services)
@@ -42,7 +52,7 @@ namespace Service
             services.AddScoped<ITransactionEventSender, TransactionEventSender>();
             services.AddScoped<IArchiveRequestSender, ArchiveRequestSender>();
             services.AddTransient<IFileManager, LocalFileManager>();
-            services.AddSingleton(Config);
+            services.AddSingleton<IFileProcessorConfig>(Config);
 
             var p = (int)Environment.OSVersion.Platform;
 

@@ -17,5 +17,9 @@ namespace Service
         public NcfsOption UnprocessableFileTypeAction { get; }
         public NcfsOption GlasswallBlockedFilesAction { get; }
         public string NcfsRoutingUrl { get; }
+        public string MessageBrokerUser { get; }
+        public string MessageBrokerPassword { get; }
+        public string AdaptationRequestQueueHostname { get; }
+        public int AdaptationRequestQueuePort { get; }
     }
 }

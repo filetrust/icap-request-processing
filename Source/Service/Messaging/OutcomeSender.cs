@@ -14,7 +14,12 @@ namespace Service.Messaging
         public OutcomeSender(IFileProcessorConfig fileProcessorConfig)
         {
             if (fileProcessorConfig == null) throw new ArgumentNullException(nameof(fileProcessorConfig));
-            var connectionFactory = new ConnectionFactory() { Uri = new Uri(fileProcessorConfig.AmqpURL) };
+            var connectionFactory = new ConnectionFactory() { 
+                HostName = fileProcessorConfig.AdaptationRequestQueueHostname,
+                Port = fileProcessorConfig.AdaptationRequestQueuePort,
+                UserName = fileProcessorConfig.MessageBrokerUser,
+                Password = fileProcessorConfig.MessageBrokerPassword
+            };
             _connection = connectionFactory.CreateConnection();
             _channel = _connection.CreateModel();
 
