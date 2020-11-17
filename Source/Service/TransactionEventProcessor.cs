@@ -14,17 +14,21 @@ namespace Service
         private readonly IGlasswallVersionService _glasswallVersionService;
         private readonly IOutcomeSender _outcomeSender;
         private readonly ITransactionEventSender _transactionEventSender;
+        private readonly IArchiveRequestSender _archiveRequestSender;
         private readonly IFileManager _fileManager;
         private readonly IFileProcessorConfig _config;
 
         private readonly TimeSpan _processingTimeoutDuration;
 
-        public TransactionEventProcessor(IGlasswallFileProcessor fileProcessor, IGlasswallVersionService versionService, IOutcomeSender outcomeSender, ITransactionEventSender transactionEventSender, IFileManager fileManager, IFileProcessorConfig config)
+        public TransactionEventProcessor(IGlasswallFileProcessor fileProcessor, IGlasswallVersionService versionService, 
+            IOutcomeSender outcomeSender, ITransactionEventSender transactionEventSender, IArchiveRequestSender archiveRequestSender,
+            IFileManager fileManager, IFileProcessorConfig config)
         {
             _fileProcessor = fileProcessor ?? throw new ArgumentNullException(nameof(fileProcessor));
             _glasswallVersionService = versionService ?? throw new ArgumentNullException(nameof(versionService));
             _outcomeSender = outcomeSender ?? throw new ArgumentNullException(nameof(outcomeSender));
             _transactionEventSender = transactionEventSender ?? throw new ArgumentNullException(nameof(transactionEventSender));
+            _archiveRequestSender = archiveRequestSender ?? throw new ArgumentNullException(nameof(archiveRequestSender));
             _fileManager = fileManager ?? throw new ArgumentNullException(nameof(fileManager));
             _config = config ?? throw new ArgumentNullException(nameof(config));
 
@@ -74,32 +78,46 @@ namespace Service
 
                 _transactionEventSender.Send(new UnmanagedFileTypeActionEvent(status, _config.FileId, timestamp));
             }
+            else if (fileType.FileType == FileType.Zip)
+            {
+                _archiveRequestSender.Send(_config.FileId, _config.InputPath, _config.OutputPath, _config.ReplyTo);
+                return Task.CompletedTask;
+            }
             else
             {
-                var report = _fileProcessor.AnalyseFile(file, fileType.FileTypeName);
-                _transactionEventSender.Send(new AnalysisCompletedEvent(report, _config.FileId, timestamp));
-
-                _transactionEventSender.Send(new RebuildStartingEvent(_config.FileId, timestamp));
-
-                var rebuiltFile = _fileProcessor.RebuildFile(file, fileType.FileTypeName);
-
-                if (rebuiltFile == null)
-                {
-                    status = GetBlockedAction();
-                    _transactionEventSender.Send(new BlockedFiletypeActionEvent(status, _config.FileId, timestamp));
-                }
-                else
-                {
-                    _fileManager.WriteFile(_config.OutputPath, rebuiltFile);
-                    status = FileOutcome.Replace;
-                }
-
-                _transactionEventSender.Send(new RebuildCompletedEvent(status, _config.FileId, timestamp));
+                status = ProcessFile(file, fileType.FileTypeName, timestamp);
             }
 
             _outcomeSender.Send(status, _config.FileId, _config.ReplyTo);
 
             return Task.CompletedTask;
+        }
+
+        private string ProcessFile(byte[] file, string filetype, DateTime timestamp)
+        {
+            string status;
+
+            var report = _fileProcessor.AnalyseFile(file, filetype);
+            _transactionEventSender.Send(new AnalysisCompletedEvent(report, _config.FileId, timestamp));
+
+            _transactionEventSender.Send(new RebuildStartingEvent(_config.FileId, timestamp));
+
+            var rebuiltFile = _fileProcessor.RebuildFile(file, filetype);
+
+            if (rebuiltFile == null)
+            {
+                status = GetBlockedAction();
+                _transactionEventSender.Send(new BlockedFiletypeActionEvent(status, _config.FileId, timestamp));
+            }
+            else
+            {
+                _fileManager.WriteFile(_config.OutputPath, rebuiltFile);
+                status = FileOutcome.Replace;
+            }
+
+            _transactionEventSender.Send(new RebuildCompletedEvent(status, _config.FileId, timestamp));
+
+            return status;
         }
 
         private void ClearRebuiltStore(string path)
