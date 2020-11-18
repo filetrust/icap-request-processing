@@ -24,7 +24,7 @@ namespace Service
         {
             var fileType = _fileTypeDetector.DetermineFileType(file);
 
-            Console.WriteLine($"Filetype Detected for {_config.FileId}: {fileType.FileTypeName}");
+            Console.WriteLine($"FileId: {_config.FileId}, Filetype Detected: {fileType.FileTypeName}");
 
             return fileType;
         }
@@ -49,7 +49,7 @@ namespace Service
             }
             else
             {
-                Console.WriteLine($"File {_config.FileId} successfully rebuilt.");
+                Console.WriteLine($"FileId: {_config.FileId}, successfully rebuilt.");
 
                 return protectedFileResponse.ProtectedFile;
             }

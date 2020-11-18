@@ -6,20 +6,24 @@ namespace Service.Messaging
 {
     public class OutcomeSender : IOutcomeSender, IDisposable
     {
-        private const string HostName = "rabbitmq-service";
-
         private bool disposedValue;
 
         private readonly IModel _channel;
         private readonly IConnection _connection;
 
-        public OutcomeSender()
+        public OutcomeSender(IFileProcessorConfig fileProcessorConfig)
         {
-            var connectionFactory = new ConnectionFactory() { HostName = HostName };
+            if (fileProcessorConfig == null) throw new ArgumentNullException(nameof(fileProcessorConfig));
+            var connectionFactory = new ConnectionFactory() { 
+                HostName = fileProcessorConfig.AdaptationRequestQueueHostname,
+                Port = fileProcessorConfig.AdaptationRequestQueuePort,
+                UserName = fileProcessorConfig.MessageBrokerUser,
+                Password = fileProcessorConfig.MessageBrokerPassword
+            };
             _connection = connectionFactory.CreateConnection();
             _channel = _connection.CreateModel();
 
-            Console.WriteLine($"Connection established to {HostName}");
+            Console.WriteLine($"OutcomeSender Connection established to {fileProcessorConfig.AdaptationRequestQueueHostname}");
         }
 
         protected virtual void Dispose(bool disposing)
