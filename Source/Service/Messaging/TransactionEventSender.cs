@@ -20,15 +20,15 @@ namespace Service.Messaging
             if (fileProcessorConfig == null) throw new ArgumentNullException(nameof(fileProcessorConfig));
             var connectionFactory = new ConnectionFactory()
             {
-                HostName = fileProcessorConfig.ArchiveAdaptationRequestQueueHostname,
-                Port = fileProcessorConfig.ArchiveAdaptationRequestQueuePort,
+                HostName = fileProcessorConfig.TransactionEventQueueHostname,
+                Port = fileProcessorConfig.TransactionEventQueuePort,
                 UserName = fileProcessorConfig.MessageBrokerUser,
                 Password = fileProcessorConfig.MessageBrokerPassword
             };
             _connection = connectionFactory.CreateConnection();
             _channel = _connection.CreateModel();
 
-            Console.WriteLine($"TransactionEventSender Connection established to {fileProcessorConfig.ArchiveAdaptationRequestQueueHostname}");
+            Console.WriteLine($"TransactionEventSender Connection established to {fileProcessorConfig.TransactionEventQueueHostname}");
         }
 
         protected virtual void Dispose(bool disposing)
