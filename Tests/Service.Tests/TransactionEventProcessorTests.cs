@@ -51,7 +51,7 @@ namespace Service.Tests
             }
 
             [TestCase(NcfsOption.Relay, FileOutcome.Unmodified)]
-            [TestCase(NcfsOption.Block, FileOutcome.Replace)]
+            [TestCase(NcfsOption.Block, FileOutcome.Failed)]
             public void Correct_Outcome_Is_Sent_When_FileType_Is_Unknown(NcfsOption unprocessableAction, string expected)
             {
                 // Arrange
@@ -69,7 +69,7 @@ namespace Service.Tests
             }
 
             [TestCase(NcfsOption.Relay, FileOutcome.Unmodified)]
-            [TestCase(NcfsOption.Block, FileOutcome.Replace)]
+            [TestCase(NcfsOption.Block, FileOutcome.Failed)]
             public void Correct_Outcome_Is_Sent_When_File_Is_Not_Rebuilt(NcfsOption blockAction, string expected)
             {
                 // Arrange
