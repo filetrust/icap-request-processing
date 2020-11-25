@@ -132,7 +132,7 @@ namespace Service
         {
             // Will be extended to include Refer Action & Decision from NCFS Service
             return _config.UnprocessableFileTypeAction == NcfsOption.Block 
-                ? FileOutcome.Replace 
+                ? FileOutcome.Failed 
                 : FileOutcome.Unmodified;
         }
 
@@ -140,7 +140,7 @@ namespace Service
         {
             // Will be extended to include Refer Action & Decision from NCFS Service
             return _config.GlasswallBlockedFilesAction == NcfsOption.Block
-                ? FileOutcome.Replace
+                ? FileOutcome.Failed
                 : FileOutcome.Unmodified;
         }
     } 
