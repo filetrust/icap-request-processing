@@ -5,6 +5,7 @@ using Service.StoreMessages.Events;
 using Service.Messaging;
 using System;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace Service
 {
@@ -19,6 +20,8 @@ namespace Service
         private readonly IFileProcessorConfig _config;
 
         private readonly TimeSpan _processingTimeoutDuration;
+
+        private List<FileType> _archiveTypes = new List<FileType>() { FileType.Zip, FileType.Rar, FileType.Tar, FileType.SevenZip };
 
         public TransactionEventProcessor(IGlasswallFileProcessor fileProcessor, IGlasswallVersionService versionService, 
             IOutcomeSender outcomeSender, ITransactionEventSender transactionEventSender, IArchiveRequestSender archiveRequestSender,
@@ -78,9 +81,9 @@ namespace Service
 
                 _transactionEventSender.Send(new UnmanagedFileTypeActionEvent(status, _config.FileId, timestamp));
             }
-            else if (fileType.FileType == FileType.Zip)
+            else if (_archiveTypes.Contains(fileType.FileType))
             {
-                _archiveRequestSender.Send(_config.FileId, _config.InputPath, _config.OutputPath, _config.ReplyTo);
+                _archiveRequestSender.Send(_config.FileId, fileType.FileTypeName, _config.InputPath, _config.OutputPath, _config.ReplyTo);
                 return Task.CompletedTask;
             }
             else
