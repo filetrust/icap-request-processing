@@ -111,6 +111,7 @@ namespace Service.Tests
             [TestCase(FileType.Tar)]
             [TestCase(FileType.Rar)]
             [TestCase(FileType.SevenZip)]
+            [TestCase(FileType.Gzip)]
             public void ArchiveRequest_Is_Sent_When_FileType_Is_An_Archive(FileType fileType)
             {
                 // Arrange
