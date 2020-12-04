@@ -33,7 +33,7 @@
         //Mpg = 38,
         // Coff = 39
         Zip = 256,
-        //Gzip = 257,
+        Gzip = 257,
         //Bzip2 = 258,
         SevenZip = 259,
         Rar = 260,
