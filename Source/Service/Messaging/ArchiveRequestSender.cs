@@ -48,7 +48,7 @@ namespace Service.Messaging
             GC.SuppressFinalize(this);
         }
 
-        public void Send(string fileId, string sourceLocation, string rebuiltLocation, string replyTo)
+        public void Send(string fileId, string fileType, string sourceLocation, string rebuiltLocation, string replyTo)
         {
             _connection = _connectionFactory.CreateConnection();
             _channel = _connection.CreateModel();
@@ -56,6 +56,7 @@ namespace Service.Messaging
             var headers = new Dictionary<string, object>()
                 {
                     { "archive-file-id", fileId },
+                    { "archive-file-type", fileType },
                     { "source-file-location", sourceLocation },
                     { "rebuilt-file-location", rebuiltLocation },
                     { "outcome-reply-to", replyTo }

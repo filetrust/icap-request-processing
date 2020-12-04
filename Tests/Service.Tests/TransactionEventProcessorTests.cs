@@ -107,8 +107,12 @@ namespace Service.Tests
                     It.IsAny<string>()));
             }
 
-            [Test]
-            public void ArchiveRequest_Is_Sent_When_FileType_Is_Zip()
+            [TestCase(FileType.Zip)]
+            [TestCase(FileType.Tar)]
+            [TestCase(FileType.Rar)]
+            [TestCase(FileType.SevenZip)]
+            [TestCase(FileType.Gzip)]
+            public void ArchiveRequest_Is_Sent_When_FileType_Is_An_Archive(FileType fileType)
             {
                 // Arrange
                 const string expectedFileId = "FileId1";
@@ -116,7 +120,7 @@ namespace Service.Tests
                 const string expectedInput = "InputPathHere";
                 const string expectedOutput = "OutputPathHere";
 
-                _mockGlasswallFileProcessor.Setup(s => s.GetFileType(It.IsAny<byte[]>())).Returns(new FileTypeDetectionResponse(FileType.Zip));
+                _mockGlasswallFileProcessor.Setup(s => s.GetFileType(It.IsAny<byte[]>())).Returns(new FileTypeDetectionResponse(fileType));
                 _mockConfig.SetupGet(s => s.PolicyId).Returns(Guid.NewGuid());
                 _mockConfig.SetupGet(s => s.FileId).Returns(expectedFileId);
                 _mockConfig.SetupGet(s => s.InputPath).Returns(expectedInput);
@@ -129,6 +133,7 @@ namespace Service.Tests
                 // Assert
                 _mockArchiveRequestSender.Verify(s => s.Send(
                     It.Is<string>(id => id == expectedFileId),
+                    It.Is<string>(ft => ft == fileType.ToString()),
                     It.Is<string>(input => input == expectedInput),
                     It.Is<string>(output => output == expectedOutput),
                     It.Is<string>(replyTo => replyTo == expectedReplyTo)));

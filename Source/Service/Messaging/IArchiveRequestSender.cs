@@ -1,9 +1,7 @@
-﻿using Service.StoreMessages.Events;
-
-namespace Service.Messaging
+﻿namespace Service.Messaging
 {
     public interface IArchiveRequestSender
     {
-        void Send(string fileId, string sourceLocation, string rebuiltLocation, string replyTo);
+        void Send(string fileId, string fileType, string sourceLocation, string rebuiltLocation, string replyTo);
     }
 }
