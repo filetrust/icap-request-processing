@@ -9,6 +9,7 @@ namespace Service
         public string FileId { get; set; }
         public string InputPath { get; set; }
         public string OutputPath { get; set; }
+        public bool GenerateReport { get; set; }
         public string ReplyTo { get; set; }
         public TimeSpan ProcessingTimeoutDuration { get; set; }
         public Guid PolicyId { get; set; }
@@ -24,5 +25,6 @@ namespace Service
         public int ArchiveAdaptationRequestQueuePort { get; set; }
         public string TransactionEventQueueHostname { get; set; }
         public int TransactionEventQueuePort { get; set; }
+        public string RebuildReportMessage { get; set; }
     }
 }
