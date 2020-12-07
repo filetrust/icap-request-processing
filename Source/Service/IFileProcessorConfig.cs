@@ -6,23 +6,25 @@ namespace Service
 {
     public interface IFileProcessorConfig
     {
-        public string FileId { get; }
-        public string InputPath { get; }
-        public string OutputPath { get; }
-        public string ReplyTo { get; }
-        public TimeSpan ProcessingTimeoutDuration { get; set; }
-        public Guid PolicyId { get; }
-        public ContentManagementFlags ContentManagementFlags { get; }
-        public NcfsOption UnprocessableFileTypeAction { get; }
-        public NcfsOption GlasswallBlockedFilesAction { get; }
-        public string NcfsRoutingUrl { get; }
-        public string MessageBrokerUser { get; }
-        public string MessageBrokerPassword { get; }
-        public string AdaptationRequestQueueHostname { get; }
-        public int AdaptationRequestQueuePort { get; }
-        public string ArchiveAdaptationRequestQueueHostname { get; }
-        public int ArchiveAdaptationRequestQueuePort { get; }
-        public string TransactionEventQueueHostname { get; }
-        public int TransactionEventQueuePort { get; }
+        string FileId { get; }
+        string InputPath { get; }
+        string OutputPath { get; }
+        bool GenerateReport { get; }
+        string ReplyTo { get; }
+        TimeSpan ProcessingTimeoutDuration { get; set; }
+        Guid PolicyId { get; }
+        ContentManagementFlags ContentManagementFlags { get; }
+        NcfsOption UnprocessableFileTypeAction { get; }
+        NcfsOption GlasswallBlockedFilesAction { get; }
+        string NcfsRoutingUrl { get; }
+        string MessageBrokerUser { get; }
+        string MessageBrokerPassword { get; }
+        string AdaptationRequestQueueHostname { get; }
+        int AdaptationRequestQueuePort { get; }
+        string ArchiveAdaptationRequestQueueHostname { get; }
+        int ArchiveAdaptationRequestQueuePort { get; }
+        string TransactionEventQueueHostname { get; }
+        int TransactionEventQueuePort { get; }
+        string RebuildReportMessage { get; }
     }
 }

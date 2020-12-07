@@ -3,6 +3,7 @@ using Glasswall.Core.Engine.Messaging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using NUnit.Framework;
+using Service.ErrorReport;
 using Service.Messaging;
 using Service.StoreMessages.Enums;
 using System;
@@ -22,6 +23,7 @@ namespace Service.Tests
             private Mock<ITransactionEventSender> _mockTransactionEventSender;
             private Mock<IArchiveRequestSender> _mockArchiveRequestSender;
             private Mock<IFileManager> _mockFileManager;
+            private Mock<IErrorReportGenerator> _mockErrorReportGenerator;
             private Mock<IFileProcessorConfig> _mockConfig;
 
             private TransactionEventProcessor _transactionEventProcessor;
@@ -35,6 +37,7 @@ namespace Service.Tests
                 _mockTransactionEventSender = new Mock<ITransactionEventSender>();
                 _mockArchiveRequestSender = new Mock<IArchiveRequestSender>();
                 _mockFileManager = new Mock<IFileManager>();
+                _mockErrorReportGenerator = new Mock<IErrorReportGenerator>();
                 _mockConfig = new Mock<IFileProcessorConfig>();
 
                 _mockFileManager.Setup(s => s.ReadFile(It.IsAny<string>())).Returns(Encoding.UTF8.GetBytes("Hello World"));
@@ -47,6 +50,7 @@ namespace Service.Tests
                     _mockTransactionEventSender.Object,
                     _mockArchiveRequestSender.Object,
                     _mockFileManager.Object,
+                    _mockErrorReportGenerator.Object,
                     _mockConfig.Object);
             }
 
@@ -137,6 +141,46 @@ namespace Service.Tests
                     It.Is<string>(input => input == expectedInput),
                     It.Is<string>(output => output == expectedOutput),
                     It.Is<string>(replyTo => replyTo == expectedReplyTo)));
+            }
+
+            [Test]
+            public void ErrorReport_Is_Created_When_Status_Is_Failed_And_GenerateReport_Is_True()
+            {
+                // Arrange
+                var expectedFileId = Guid.NewGuid().ToString();
+
+                _mockGlasswallFileProcessor.Setup(s => s.GetFileType(It.IsAny<byte[]>())).Returns(new FileTypeDetectionResponse(FileType.Doc));
+                _mockGlasswallFileProcessor.Setup(s => s.RebuildFile(It.IsAny<byte[]>(), It.IsAny<string>())).Returns((byte[])null);
+                _mockConfig.SetupGet(s => s.GlasswallBlockedFilesAction).Returns(NcfsOption.Block);
+                _mockConfig.SetupGet(s => s.FileId).Returns(expectedFileId);
+                _mockConfig.SetupGet(s => s.GenerateReport).Returns(true);
+
+                // Act
+                _transactionEventProcessor.Process();
+
+                // Assert
+                _mockErrorReportGenerator.Verify(s => s.CreateReport(
+                    It.Is<string>(id => id == expectedFileId)), Times.Once);
+            }
+
+            [Test]
+            public void ErrorReport_IsNot_Created_When_Status_Is_Failed_And_GenerateReport_Is_False()
+            {
+                // Arrange
+                var expectedFileId = Guid.NewGuid().ToString();
+
+                _mockGlasswallFileProcessor.Setup(s => s.GetFileType(It.IsAny<byte[]>())).Returns(new FileTypeDetectionResponse(FileType.Doc));
+                _mockGlasswallFileProcessor.Setup(s => s.RebuildFile(It.IsAny<byte[]>(), It.IsAny<string>())).Returns((byte[])null);
+                _mockConfig.SetupGet(s => s.GlasswallBlockedFilesAction).Returns(NcfsOption.Block);
+                _mockConfig.SetupGet(s => s.FileId).Returns(expectedFileId);
+                _mockConfig.SetupGet(s => s.GenerateReport).Returns(false);
+
+                // Act
+                _transactionEventProcessor.Process();
+
+                // Assert
+                _mockErrorReportGenerator.Verify(s => s.CreateReport(
+                    It.IsAny<string>()), Times.Never);
             }
 
             [Test]

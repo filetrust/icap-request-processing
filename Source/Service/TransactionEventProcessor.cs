@@ -6,6 +6,8 @@ using Service.Messaging;
 using System;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using Service.ErrorReport;
+using System.Text;
 
 namespace Service
 {
@@ -17,6 +19,7 @@ namespace Service
         private readonly ITransactionEventSender _transactionEventSender;
         private readonly IArchiveRequestSender _archiveRequestSender;
         private readonly IFileManager _fileManager;
+        private readonly IErrorReportGenerator _errorReportGenerator;
         private readonly IFileProcessorConfig _config;
 
         private readonly TimeSpan _processingTimeoutDuration;
@@ -25,7 +28,7 @@ namespace Service
 
         public TransactionEventProcessor(IGlasswallFileProcessor fileProcessor, IGlasswallVersionService versionService, 
             IOutcomeSender outcomeSender, ITransactionEventSender transactionEventSender, IArchiveRequestSender archiveRequestSender,
-            IFileManager fileManager, IFileProcessorConfig config)
+            IFileManager fileManager, IErrorReportGenerator errorReportGenerator, IFileProcessorConfig config)
         {
             _fileProcessor = fileProcessor ?? throw new ArgumentNullException(nameof(fileProcessor));
             _glasswallVersionService = versionService ?? throw new ArgumentNullException(nameof(versionService));
@@ -33,6 +36,7 @@ namespace Service
             _transactionEventSender = transactionEventSender ?? throw new ArgumentNullException(nameof(transactionEventSender));
             _archiveRequestSender = archiveRequestSender ?? throw new ArgumentNullException(nameof(archiveRequestSender));
             _fileManager = fileManager ?? throw new ArgumentNullException(nameof(fileManager));
+            _errorReportGenerator = errorReportGenerator ?? throw new ArgumentNullException(nameof(errorReportGenerator));
             _config = config ?? throw new ArgumentNullException(nameof(config));
 
             _processingTimeoutDuration = _config.ProcessingTimeoutDuration;
@@ -89,6 +93,12 @@ namespace Service
             else
             {
                 status = ProcessFile(file, fileType.FileTypeName, timestamp);
+            }
+
+            if (status == FileOutcome.Failed && _config.GenerateReport)
+            {
+                var report = _errorReportGenerator.CreateReport(_config.FileId);
+                _fileManager.WriteFile(_config.OutputPath, Encoding.UTF8.GetBytes(report));
             }
 
             _outcomeSender.Send(status, _config.FileId, _config.ReplyTo);

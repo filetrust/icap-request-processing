@@ -8,6 +8,7 @@ using Glasswall.Core.Engine.Common.PolicyConfig;
 using Glasswall.Core.Engine.FileProcessing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Service.ErrorReport;
 using Service.Messaging;
 
 namespace Service
@@ -52,6 +53,7 @@ namespace Service
             services.AddScoped<ITransactionEventSender, TransactionEventSender>();
             services.AddScoped<IArchiveRequestSender, ArchiveRequestSender>();
             services.AddTransient<IFileManager, LocalFileManager>();
+            services.AddTransient<IErrorReportGenerator, HtmlErrorReportGenerator>();
             services.AddSingleton<IFileProcessorConfig>(Config);
 
             var p = (int)Environment.OSVersion.Platform;
