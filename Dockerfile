@@ -12,7 +12,7 @@ COPY Source/Common/Engine/Engine.csproj Source/Common/
 COPY Source/Common/Engine.Common/Engine.Common.csproj Source/Common/
 COPY Source/Common/Engine.Messaging/Engine.Messaging.csproj Source/Common/
 
-COPY lib/linux/SDK/libglasswall.classic.so lib/linux/SDK/
+COPY lib/libs/rebuild/linux/libglasswall.classic.so lib/libs/rebuild/linux/
 COPY Source/Service/libfreetype.so.6 Source/Service/libfreetype.so.6
 RUN dotnet restore Source/Service/Service.csproj 
 
