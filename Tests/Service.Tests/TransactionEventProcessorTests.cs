@@ -60,10 +60,44 @@ namespace Service.Tests
             }
 
             [Test]
-            public void Correct_Outcome_Is_Sent_When_The_File_Does_Not_Exist()
+            public void Failed_Outcome_Is_Sent_When_The_File_Does_Not_Exist()
             {
                 // Arrange
                 _mockFileManager.Setup(s => s.FileExists(It.IsAny<string>())).Returns(false);
+
+                // Act
+                _transactionEventProcessor.Process();
+
+                // Assert
+                _mockOutcomeSender.Verify(s => s.Send(
+                    It.Is<string>(status => status == FileOutcome.Failed),
+                    It.IsAny<string>(),
+                    It.IsAny<string>()));
+            }
+
+            [Test]
+            public void Failed_Outcome_Is_Sent_When_An_Exception_Is_Thrown()
+            {
+                // Arrange
+                _mockFileManager.Setup(s => s.FileExists(It.IsAny<string>())).Returns(true);
+                _mockGlasswallFileProcessor.Setup(s => s.GetFileType(It.IsAny<byte[]>())).Throws(new Exception());
+
+                // Act
+                _transactionEventProcessor.Process();
+
+                // Assert
+                _mockOutcomeSender.Verify(s => s.Send(
+                    It.Is<string>(status => status == FileOutcome.Failed),
+                    It.IsAny<string>(),
+                    It.IsAny<string>()));
+            }
+
+            [Test]
+            public void Failed_Outcome_Is_Sent_When_Timeout_Is_Exceeded()
+            {
+                // Arrange
+                _mockFileManager.Setup(s => s.FileExists(It.IsAny<string>())).Returns(true);
+                _mockGlasswallFileProcessor.Setup(s => s.GetFileType(It.IsAny<byte[]>())).Throws(new Exception());
 
                 // Act
                 _transactionEventProcessor.Process();
