@@ -8,6 +8,7 @@ using Glasswall.Core.Engine.Common.PolicyConfig;
 using Glasswall.Core.Engine.FileProcessing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Service.ErrorReport;
 using Service.Messaging;
 
@@ -42,6 +43,7 @@ namespace Service
 
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddLogging(configure => configure.AddConsole());
             services.AddTransient<IGlasswallVersionService, GlasswallVersionService>();
             services.AddTransient<IFileTypeDetector, FileTypeDetector>();
             services.AddTransient<IFileProtector, FileProtector>();

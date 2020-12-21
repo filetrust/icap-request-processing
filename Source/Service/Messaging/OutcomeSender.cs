@@ -1,4 +1,5 @@
-﻿using RabbitMQ.Client;
+﻿using Microsoft.Extensions.Logging;
+using RabbitMQ.Client;
 using System;
 using System.Collections.Generic;
 
@@ -8,11 +9,15 @@ namespace Service.Messaging
     {
         private bool disposedValue;
 
+        private readonly ILogger<OutcomeSender> _logger;
+
         private readonly IModel _channel;
         private readonly IConnection _connection;
 
-        public OutcomeSender(IFileProcessorConfig fileProcessorConfig)
+        public OutcomeSender(IFileProcessorConfig fileProcessorConfig, ILogger<OutcomeSender> logger)
         {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+
             if (fileProcessorConfig == null) throw new ArgumentNullException(nameof(fileProcessorConfig));
             var connectionFactory = new ConnectionFactory() { 
                 HostName = fileProcessorConfig.AdaptationRequestQueueHostname,
@@ -23,7 +28,7 @@ namespace Service.Messaging
             _connection = connectionFactory.CreateConnection();
             _channel = _connection.CreateModel();
 
-            Console.WriteLine($"OutcomeSender Connection established to {fileProcessorConfig.AdaptationRequestQueueHostname}");
+            _logger.LogInformation($"OutcomeSender Connection established to {fileProcessorConfig.AdaptationRequestQueueHostname}");
         }
 
         protected virtual void Dispose(bool disposing)
@@ -59,7 +64,7 @@ namespace Service.Messaging
             replyProps.Headers = headers;
             _channel.BasicPublish("", replyTo, basicProperties: replyProps);
 
-            Console.WriteLine($"Sent Message, ReplyTo: { replyTo}, FileId: {fileId}, Outcome: {status}");
+            _logger.LogInformation($"Sent Message, ReplyTo: { replyTo}, FileId: {fileId}, Outcome: {status}");
         }
     }
 }

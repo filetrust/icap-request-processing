@@ -8,6 +8,8 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using Service.ErrorReport;
 using System.Text;
+using Microsoft.Extensions.Logging;
+using System.IO;
 
 namespace Service
 {
@@ -21,6 +23,7 @@ namespace Service
         private readonly IFileManager _fileManager;
         private readonly IErrorReportGenerator _errorReportGenerator;
         private readonly IFileProcessorConfig _config;
+        private readonly ILogger<TransactionEventProcessor> _logger;
 
         private readonly TimeSpan _processingTimeoutDuration;
 
@@ -28,7 +31,7 @@ namespace Service
 
         public TransactionEventProcessor(IGlasswallFileProcessor fileProcessor, IGlasswallVersionService versionService, 
             IOutcomeSender outcomeSender, ITransactionEventSender transactionEventSender, IArchiveRequestSender archiveRequestSender,
-            IFileManager fileManager, IErrorReportGenerator errorReportGenerator, IFileProcessorConfig config)
+            IFileManager fileManager, IErrorReportGenerator errorReportGenerator, IFileProcessorConfig config, ILogger<TransactionEventProcessor> logger)
         {
             _fileProcessor = fileProcessor ?? throw new ArgumentNullException(nameof(fileProcessor));
             _glasswallVersionService = versionService ?? throw new ArgumentNullException(nameof(versionService));
@@ -38,6 +41,7 @@ namespace Service
             _fileManager = fileManager ?? throw new ArgumentNullException(nameof(fileManager));
             _errorReportGenerator = errorReportGenerator ?? throw new ArgumentNullException(nameof(errorReportGenerator));
             _config = config ?? throw new ArgumentNullException(nameof(config));
+            _logger = logger ?? throw new ArgumentNullException(nameof(config));
 
             _processingTimeoutDuration = _config.ProcessingTimeoutDuration;
         }
@@ -55,14 +59,18 @@ namespace Service
 
                 if (!isCompletedSuccessfully)
                 {
-                    Console.WriteLine($"Error: Processing 'input' {_config.FileId} exceeded {_processingTimeoutDuration}s");
+                    _logger.LogError($"File Id: {_config.FileId} Processing exceeded {_processingTimeoutDuration}s");
                     ClearRebuiltStore(_config.OutputPath);
+                    CreateErrorReport();
+                    _outcomeSender.Send(FileOutcome.Failed, _config.FileId, _config.ReplyTo);
                 }
             }
             catch (Exception e) 
             {
-                Console.WriteLine($"Error: Processing 'input' {_config.FileId} threw exception {e.Message}");
+                _logger.LogError($"File Id: {_config.FileId} Processing threw exception {e.Message}");
                 ClearRebuiltStore(_config.OutputPath);
+                CreateErrorReport();
+                _outcomeSender.Send(FileOutcome.Failed, _config.FileId, _config.ReplyTo);
             }
         }
 
@@ -71,7 +79,12 @@ namespace Service
             var timestamp = DateTime.UtcNow;
             _transactionEventSender.Send(new NewDocumentEvent(_config.PolicyId.ToString(), RequestMode.Response, _config.FileId, timestamp));
 
-            Console.WriteLine($"Using Glasswall Version: {_glasswallVersionService.GetVersion()}");
+            _logger.LogInformation($"File Id: {_config.FileId} Using Glasswall Version: {_glasswallVersionService.GetVersion()}");
+
+            if (!_fileManager.FileExists(_config.InputPath))
+            {
+                throw new FileNotFoundException($"File Id: {_config.FileId} does not exist at {_config.InputPath}");
+            }
 
             var file = _fileManager.ReadFile(_config.InputPath);
 
@@ -95,15 +108,23 @@ namespace Service
                 status = ProcessFile(file, fileType.FileTypeName, timestamp);
             }
 
-            if (status == FileOutcome.Failed && _config.GenerateReport)
+            if (status == FileOutcome.Failed)
             {
-                var report = _errorReportGenerator.CreateReport(_config.FileId);
-                _fileManager.WriteFile(_config.OutputPath, Encoding.UTF8.GetBytes(report));
+                CreateErrorReport();
             }
 
             _outcomeSender.Send(status, _config.FileId, _config.ReplyTo);
 
             return Task.CompletedTask;
+        }
+
+        private void CreateErrorReport()
+        {
+            if (_config.GenerateReport)
+            {
+                var report = _errorReportGenerator.CreateReport(_config.FileId);
+                _fileManager.WriteFile(_config.OutputPath, Encoding.UTF8.GetBytes(report));
+            }
         }
 
         private string ProcessFile(byte[] file, string filetype, DateTime timestamp)
