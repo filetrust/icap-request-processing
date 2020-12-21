@@ -1,4 +1,5 @@
-﻿using RabbitMQ.Client;
+﻿using Microsoft.Extensions.Logging;
+using RabbitMQ.Client;
 using Service.StoreMessages.Events;
 using System;
 using System.Text;
@@ -12,11 +13,15 @@ namespace Service.Messaging
 
         private bool disposedValue;
 
+        private readonly ILogger<TransactionEventSender> _logger;
+
         private readonly IModel _channel;
         private readonly IConnection _connection;
 
-        public TransactionEventSender(IFileProcessorConfig fileProcessorConfig)
+        public TransactionEventSender(IFileProcessorConfig fileProcessorConfig, ILogger<TransactionEventSender> logger)
         {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+
             if (fileProcessorConfig == null) throw new ArgumentNullException(nameof(fileProcessorConfig));
             var connectionFactory = new ConnectionFactory()
             {
@@ -28,7 +33,7 @@ namespace Service.Messaging
             _connection = connectionFactory.CreateConnection();
             _channel = _connection.CreateModel();
 
-            Console.WriteLine($"TransactionEventSender Connection established to {fileProcessorConfig.TransactionEventQueueHostname}");
+            _logger.LogInformation($"TransactionEventSender Connection established to {fileProcessorConfig.TransactionEventQueueHostname}");
         }
 
         protected virtual void Dispose(bool disposing)
@@ -59,7 +64,7 @@ namespace Service.Messaging
             var message = Encoding.UTF8.GetBytes(transactionEvent.ToJson());
 
             _channel.BasicPublish(Exchange, RoutingKey, null, message);
-            Console.WriteLine($"Sent Transaction Event, FileId: {transactionEvent.FileId}, EventId: {transactionEvent.EventId}");
+            _logger.LogInformation($"Sent Transaction Event, FileId: {transactionEvent.FileId}, EventId: {transactionEvent.EventId}");
         }
     }
 }
