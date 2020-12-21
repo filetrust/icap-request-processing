@@ -61,6 +61,7 @@ namespace Service
                 {
                     _logger.LogError($"File Id: {_config.FileId} Processing exceeded {_processingTimeoutDuration}s");
                     ClearRebuiltStore(_config.OutputPath);
+                    CreateErrorReport();
                     _outcomeSender.Send(FileOutcome.Failed, _config.FileId, _config.ReplyTo);
                 }
             }
@@ -68,6 +69,7 @@ namespace Service
             {
                 _logger.LogError($"File Id: {_config.FileId} Processing threw exception {e.Message}");
                 ClearRebuiltStore(_config.OutputPath);
+                CreateErrorReport();
                 _outcomeSender.Send(FileOutcome.Failed, _config.FileId, _config.ReplyTo);
             }
         }
@@ -106,15 +108,23 @@ namespace Service
                 status = ProcessFile(file, fileType.FileTypeName, timestamp);
             }
 
-            if (status == FileOutcome.Failed && _config.GenerateReport)
+            if (status == FileOutcome.Failed)
             {
-                var report = _errorReportGenerator.CreateReport(_config.FileId);
-                _fileManager.WriteFile(_config.OutputPath, Encoding.UTF8.GetBytes(report));
+                CreateErrorReport();
             }
 
             _outcomeSender.Send(status, _config.FileId, _config.ReplyTo);
 
             return Task.CompletedTask;
+        }
+
+        private void CreateErrorReport()
+        {
+            if (_config.GenerateReport)
+            {
+                var report = _errorReportGenerator.CreateReport(_config.FileId);
+                _fileManager.WriteFile(_config.OutputPath, Encoding.UTF8.GetBytes(report));
+            }
         }
 
         private string ProcessFile(byte[] file, string filetype, DateTime timestamp)
