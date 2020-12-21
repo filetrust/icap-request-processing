@@ -1,6 +1,7 @@
 ﻿using Glasswall.Core.Engine.Common.FileProcessing;
 using Glasswall.Core.Engine.Common.PolicyConfig;
 using Glasswall.Core.Engine.Messaging;
+using Microsoft.Extensions.Logging;
 using System;
 
 namespace Service
@@ -11,20 +12,22 @@ namespace Service
         private readonly IFileProtector _fileProtector;
         private readonly IFileAnalyser _fileAnalyser;
         private readonly IFileProcessorConfig _config;
+        private readonly ILogger<GlasswallFileProcessor> _logger;
 
-        public GlasswallFileProcessor(IFileTypeDetector fileTypeDetector, IFileProtector fileProtector, IFileAnalyser fileAnalyser, IFileProcessorConfig config)
+        public GlasswallFileProcessor(IFileTypeDetector fileTypeDetector, IFileProtector fileProtector, IFileAnalyser fileAnalyser, IFileProcessorConfig config, ILogger<GlasswallFileProcessor> logger)
         {
             _fileTypeDetector = fileTypeDetector ?? throw new ArgumentNullException(nameof(fileTypeDetector));
             _fileProtector = fileProtector ?? throw new ArgumentNullException(nameof(fileProtector));
             _fileAnalyser = fileAnalyser ?? throw new ArgumentNullException(nameof(fileAnalyser));
             _config = config ?? throw new ArgumentNullException(nameof(config));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         public FileTypeDetectionResponse GetFileType(byte[] file)
         {
             var fileType = _fileTypeDetector.DetermineFileType(file);
 
-            Console.WriteLine($"FileId: {_config.FileId}, Filetype Detected: {fileType.FileTypeName}");
+            _logger.LogInformation($"FileId: {_config.FileId}, Filetype Detected: {fileType.FileTypeName}");
 
             return fileType;
         }
@@ -41,15 +44,15 @@ namespace Service
             if (!string.IsNullOrWhiteSpace(protectedFileResponse.ErrorMessage) || protectedFileResponse.ProtectedFile == null)
             {
                 if (protectedFileResponse.IsDisallowed)
-                    Console.WriteLine($"File {_config.FileId} is disallowed by Content Management Policy");
+                    _logger.LogInformation($"File {_config.FileId} is disallowed by Content Management Policy");
 
-                Console.WriteLine($"File {_config.FileId} could not be rebuilt: {protectedFileResponse.ErrorMessage}.");
+                _logger.LogInformation($"File {_config.FileId} could not be rebuilt: {protectedFileResponse.ErrorMessage}.");
 
                 return null;
             }
             else
             {
-                Console.WriteLine($"FileId: {_config.FileId}, successfully rebuilt.");
+                _logger.LogInformation($"FileId: {_config.FileId}, successfully rebuilt.");
 
                 return protectedFileResponse.ProtectedFile;
             }

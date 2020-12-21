@@ -1,4 +1,5 @@
-﻿using RabbitMQ.Client;
+﻿using Microsoft.Extensions.Logging;
+using RabbitMQ.Client;
 using System;
 using System.Collections.Generic;
 
@@ -9,14 +10,18 @@ namespace Service.Messaging
         private const string Exchange = "adaptation-exchange";
         private const string RoutingKey = "archive-adaptation-request";
 
+        private readonly ILogger<ArchiveRequestSender> _logger;
+
         private readonly IConnectionFactory _connectionFactory;
         private IConnection _connection;
         private IModel _channel;
 
         private bool disposedValue;
 
-        public ArchiveRequestSender(IFileProcessorConfig fileProcessorConfig)
+        public ArchiveRequestSender(IFileProcessorConfig fileProcessorConfig, ILogger<ArchiveRequestSender> logger)
         {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+
             if (fileProcessorConfig == null) throw new ArgumentNullException(nameof(fileProcessorConfig));
             _connectionFactory = new ConnectionFactory()
             {
@@ -66,7 +71,7 @@ namespace Service.Messaging
             replyProps.Headers = headers;
             _channel.BasicPublish(Exchange, RoutingKey, basicProperties: replyProps);
 
-            Console.WriteLine($"Sent Archive Request, FileId: {fileId}, SourceFileLocation: {sourceLocation}, " +
+            _logger.LogInformation($"Sent Archive Request, FileId: {fileId}, SourceFileLocation: {sourceLocation}, " +
                 $"RebuiltFileLocation: {rebuiltLocation}, ReplyTo: {replyTo}");
         }
     }
