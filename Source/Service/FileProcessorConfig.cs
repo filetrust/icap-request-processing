@@ -26,5 +26,6 @@ namespace Service
         public string TransactionEventQueueHostname { get; set; }
         public int TransactionEventQueuePort { get; set; }
         public string RebuildReportMessage { get; set; }
+        public string MetricsEndpoint { get; set; }
     }
 }
