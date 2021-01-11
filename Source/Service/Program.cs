@@ -22,8 +22,7 @@ namespace Service
                 {
                     Endpoint = configuration.MetricsEndpoint,
                     Job = "icap-request-processing",
-                    IntervalMilliseconds = 5,
-                    Instance = configuration.FileId
+                    IntervalMilliseconds = 5
                 });
 
                 pusher.Start();
