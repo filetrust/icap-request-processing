@@ -10,6 +10,8 @@ using Service.ErrorReport;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using System.IO;
+using Service.Prometheus;
+using Prometheus;
 
 namespace Service
 {
@@ -48,29 +50,35 @@ namespace Service
 
         public void Process()
         {
-            var task = Task.Run(() =>
-             {
-                 return ProcessTransaction();
-             });
-
-            try
+            using (MetricsCounters.ProcTime.NewTimer())
             {
-                bool isCompletedSuccessfully = task.Wait(_processingTimeoutDuration);
 
-                if (!isCompletedSuccessfully)
+                var task = Task.Run(() =>
+                 {
+                     return ProcessTransaction();
+                 });
+
+                try
                 {
-                    _logger.LogError($"File Id: {_config.FileId} Processing exceeded {_processingTimeoutDuration}s");
+                    bool isCompletedSuccessfully = task.Wait(_processingTimeoutDuration);
+
+                    if (!isCompletedSuccessfully)
+                    {
+                        MetricsCounters.ProcCnt.WithLabels(Labels.Timeout).Inc();
+                        _logger.LogError($"File Id: {_config.FileId} Processing exceeded {_processingTimeoutDuration}s");
+                        ClearRebuiltStore(_config.OutputPath);
+                        CreateErrorReport();
+                        _outcomeSender.Send(FileOutcome.Failed, _config.FileId, _config.ReplyTo);
+                    }
+                }
+                catch (Exception e)
+                {
+                    MetricsCounters.ProcCnt.WithLabels(Labels.Exception).Inc();
+                    _logger.LogError($"File Id: {_config.FileId} Processing threw exception {e.Message}");
                     ClearRebuiltStore(_config.OutputPath);
                     CreateErrorReport();
                     _outcomeSender.Send(FileOutcome.Failed, _config.FileId, _config.ReplyTo);
                 }
-            }
-            catch (Exception e) 
-            {
-                _logger.LogError($"File Id: {_config.FileId} Processing threw exception {e.Message}");
-                ClearRebuiltStore(_config.OutputPath);
-                CreateErrorReport();
-                _outcomeSender.Send(FileOutcome.Failed, _config.FileId, _config.ReplyTo);
             }
         }
 
@@ -101,6 +109,7 @@ namespace Service
             else if (_archiveTypes.Contains(fileType.FileType))
             {
                 _archiveRequestSender.Send(_config.FileId, fileType.FileTypeName, _config.InputPath, _config.OutputPath, _config.ReplyTo);
+                MetricsCounters.ProcCnt.WithLabels(Labels.ArchiveFound).Inc();
                 return Task.CompletedTask;
             }
             else
@@ -115,6 +124,7 @@ namespace Service
 
             _outcomeSender.Send(status, _config.FileId, _config.ReplyTo);
 
+            MetricsCounters.ProcCnt.WithLabels(status).Inc();
             return Task.CompletedTask;
         }
 
