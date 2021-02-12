@@ -2,7 +2,7 @@
 using Service.StoreMessages.Enums;
 using System;
 
-namespace Service
+namespace Service.Configuration
 {
     public class FileProcessorConfig : IFileProcessorConfig
     {

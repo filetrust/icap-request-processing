@@ -1,4 +1,4 @@
-﻿namespace Service
+﻿namespace Service.Storage
 {
     public interface IFileManager
     {
