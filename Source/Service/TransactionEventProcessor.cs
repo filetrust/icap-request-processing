@@ -174,28 +174,42 @@ namespace Service
 
         private string GetUnmanagedAction(DateTime timestamp)
         {
-            _transactionEventSender.Send(new NcfsStartedEvent(_config.FileId, timestamp));
+            var outcome = FileOutcome.Failed;
 
-            // Will be extended to include Refer Action & Decision from NCFS Service
-            var outcome = _config.UnprocessableFileTypeAction == NcfsOption.Block
-                ? FileOutcome.Failed
-                : FileOutcome.Unmodified;
+            if (_config.UnprocessableFileTypeAction == NcfsOption.Refer)
+            {
+                _transactionEventSender.Send(new NcfsStartedEvent(_config.FileId, timestamp));
+                // Send to NCFS Service
+                _transactionEventSender.Send(new NcfsCompletedEvent(outcome, _config.FileId, timestamp));
 
-            _transactionEventSender.Send(new NcfsCompletedEvent(outcome, _config.FileId, timestamp));
+            }
+            else
+            {
+                outcome = _config.UnprocessableFileTypeAction == NcfsOption.Block
+                    ? FileOutcome.Failed
+                    : FileOutcome.Unmodified;
+            }
 
             return outcome;
         }
 
         private string GetBlockedAction(DateTime timestamp)
         {
-            _transactionEventSender.Send(new NcfsStartedEvent(_config.FileId, timestamp));
+            var outcome = FileOutcome.Failed;
 
-            // Will be extended to include Refer Action & Decision from NCFS Service
-            var outcome = _config.GlasswallBlockedFilesAction == NcfsOption.Block
-                ? FileOutcome.Failed
-                : FileOutcome.Unmodified;
+            if (_config.GlasswallBlockedFilesAction == NcfsOption.Refer)
+            {
+                _transactionEventSender.Send(new NcfsStartedEvent(_config.FileId, timestamp));
+                // Send to NCFS Service
+                _transactionEventSender.Send(new NcfsCompletedEvent(outcome, _config.FileId, timestamp));
 
-            _transactionEventSender.Send(new NcfsCompletedEvent(outcome, _config.FileId, timestamp));
+            }
+            else
+            {
+                outcome = _config.GlasswallBlockedFilesAction == NcfsOption.Block
+                    ? FileOutcome.Failed
+                    : FileOutcome.Unmodified;
+            }
 
             return outcome;
         }
