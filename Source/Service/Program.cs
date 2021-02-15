@@ -1,5 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Prometheus;
+using Service.Configuration;
+using Service.TransactionEvent;
 
 namespace Service
 {
