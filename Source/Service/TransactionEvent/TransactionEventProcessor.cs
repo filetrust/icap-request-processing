@@ -15,6 +15,7 @@ using Prometheus;
 using Service.Engine;
 using Service.Configuration;
 using Service.Storage;
+using Service.NCFS;
 
 namespace Service.TransactionEvent
 {
@@ -26,6 +27,7 @@ namespace Service.TransactionEvent
         private readonly IArchiveRequestSender _archiveRequestSender;
         private readonly IFileManager _fileManager;
         private readonly IErrorReportGenerator _errorReportGenerator;
+        private readonly INcfsProcessor _ncfsProcessor;
         private readonly IFileProcessorConfig _config;
         private readonly ILogger<TransactionEventProcessor> _logger;
 
@@ -34,7 +36,7 @@ namespace Service.TransactionEvent
         private readonly List<FileType> _archiveTypes = new List<FileType>() { FileType.Zip, FileType.Rar, FileType.Tar, FileType.SevenZip, FileType.Gzip };
 
         public TransactionEventProcessor(IGlasswallEngineService glasswallEngineService, IOutcomeSender outcomeSender, ITransactionEventSender transactionEventSender, IArchiveRequestSender archiveRequestSender,
-            IFileManager fileManager, IErrorReportGenerator errorReportGenerator, IFileProcessorConfig config, ILogger<TransactionEventProcessor> logger)
+            IFileManager fileManager, IErrorReportGenerator errorReportGenerator, INcfsProcessor ncfsProcessor, IFileProcessorConfig config, ILogger<TransactionEventProcessor> logger)
         {
             _glasswallEngineService = glasswallEngineService ?? throw new ArgumentNullException(nameof(glasswallEngineService));
             _outcomeSender = outcomeSender ?? throw new ArgumentNullException(nameof(outcomeSender));
@@ -42,6 +44,7 @@ namespace Service.TransactionEvent
             _archiveRequestSender = archiveRequestSender ?? throw new ArgumentNullException(nameof(archiveRequestSender));
             _fileManager = fileManager ?? throw new ArgumentNullException(nameof(fileManager));
             _errorReportGenerator = errorReportGenerator ?? throw new ArgumentNullException(nameof(errorReportGenerator));
+            _ncfsProcessor = ncfsProcessor ?? throw new ArgumentNullException(nameof(ncfsProcessor));
             _config = config ?? throw new ArgumentNullException(nameof(config));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
@@ -82,7 +85,7 @@ namespace Service.TransactionEvent
             }
         }
 
-        private Task ProcessTransaction()
+        private async Task ProcessTransaction()
         {
             var timestamp = DateTime.UtcNow;
             _transactionEventSender.Send(new NewDocumentEvent(_config.PolicyId.ToString(), RequestMode.Response, _config.FileId, timestamp));
@@ -102,19 +105,19 @@ namespace Service.TransactionEvent
             string status;
             if (fileType.FileType == FileType.Unknown)
             {
-                status = GetUnmanagedAction(timestamp);
-
+                var base64File = Convert.ToBase64String(file);
+                status = await _ncfsProcessor.GetUnmanagedActionAsync(timestamp, base64File, fileType.FileType);
                 _transactionEventSender.Send(new UnmanagedFileTypeActionEvent(status, _config.FileId, timestamp));
             }
             else if (_archiveTypes.Contains(fileType.FileType))
             {
                 _archiveRequestSender.Send(_config.FileId, fileType.FileTypeName, _config.InputPath, _config.OutputPath, _config.ReplyTo);
                 MetricsCounters.ProcCnt.WithLabels(Labels.ArchiveFound).Inc();
-                return Task.CompletedTask;
+                return;
             }
             else
             {
-                status = ProcessFile(file, fileType.FileTypeName, timestamp);
+                status = await ProcessFile(file, fileType.FileType, timestamp);
             }
 
             if (status == FileOutcome.Failed)
@@ -125,7 +128,7 @@ namespace Service.TransactionEvent
             _outcomeSender.Send(status, _config.FileId, _config.ReplyTo);
 
             MetricsCounters.ProcCnt.WithLabels(status).Inc();
-            return Task.CompletedTask;
+            return;
         }
 
         private void CreateErrorReport()
@@ -137,20 +140,21 @@ namespace Service.TransactionEvent
             }
         }
 
-        private string ProcessFile(byte[] file, string filetype, DateTime timestamp)
+        private async Task<string> ProcessFile(byte[] file, FileType filetype, DateTime timestamp)
         {
             string status;
 
-            var report = _glasswallEngineService.AnalyseFile(file, filetype, _config.FileId);
+            var report = _glasswallEngineService.AnalyseFile(file, filetype.ToString(), _config.FileId);
             _transactionEventSender.Send(new AnalysisCompletedEvent(report, _config.FileId, timestamp));
 
             _transactionEventSender.Send(new RebuildStartingEvent(_config.FileId, timestamp));
 
-            var rebuiltFile = _glasswallEngineService.RebuildFile(file, filetype, _config.FileId, _config.ContentManagementFlags);
+            var rebuiltFile = _glasswallEngineService.RebuildFile(file, filetype.ToString(), _config.FileId, _config.ContentManagementFlags);
 
             if (rebuiltFile == null)
             {
-                status = GetBlockedAction(timestamp);
+                var base64File = Convert.ToBase64String(file);
+                status = await _ncfsProcessor.GetBlockedActionAsync(timestamp, base64File, filetype);
                 _transactionEventSender.Send(new BlockedFiletypeActionEvent(status, _config.FileId, timestamp));
             }
             else
