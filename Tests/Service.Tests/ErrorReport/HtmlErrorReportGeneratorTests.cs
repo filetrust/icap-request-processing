@@ -1,5 +1,6 @@
 ﻿using Moq;
 using NUnit.Framework;
+using Service.Configuration;
 using Service.ErrorReport;
 using System;
 

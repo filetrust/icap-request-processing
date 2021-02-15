@@ -78,7 +78,7 @@ namespace Service.NCFS
 
             _logger.LogInformation($"File Id: {_config.FileId} Received outcome {response.NcfsDecision} from NCFS Api.");
 
-            if (!string.IsNullOrEmpty(response.Base64Replacement))
+            if (response.NcfsDecision == FileOutcome.Replace)
             {
                 _logger.LogInformation($"File Id: {_config.FileId} Received base64 replacement from NCFS Api.");
 
