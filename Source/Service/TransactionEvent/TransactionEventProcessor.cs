@@ -128,7 +128,6 @@ namespace Service.TransactionEvent
             _outcomeSender.Send(status, _config.FileId, _config.ReplyTo);
 
             MetricsCounters.ProcCnt.WithLabels(status).Inc();
-            return;
         }
 
         private void CreateErrorReport()
@@ -151,7 +150,7 @@ namespace Service.TransactionEvent
 
             var rebuiltFile = _glasswallEngineService.RebuildFile(file, filetype.ToString(), _config.FileId, _config.ContentManagementFlags);
 
-            if (rebuiltFile == null)
+            if (rebuiltFile == null || rebuiltFile.Length == 0)
             {
                 var base64File = Convert.ToBase64String(file);
                 status = await _ncfsProcessor.GetBlockedActionAsync(timestamp, base64File, filetype);

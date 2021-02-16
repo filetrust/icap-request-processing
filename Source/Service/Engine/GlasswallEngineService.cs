@@ -53,7 +53,7 @@ namespace Service.Engine
 
                 _logger.LogInformation($"File {fileId} could not be rebuilt: {protectedFileResponse.ErrorMessage}.");
 
-                return null;
+                return new byte[0];
             }
             else
             {

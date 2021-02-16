@@ -10,8 +10,8 @@ namespace Service.NCFS
 {
     public class NcfsClient : INcfsClient
     {
-        private IFileProcessorConfig _config;
-        private ILogger<NcfsClient> _logger;
+        private readonly IFileProcessorConfig _config;
+        private readonly ILogger<NcfsClient> _logger;
 
         public NcfsClient(IFileProcessorConfig config, ILogger<NcfsClient> logger)
         {
