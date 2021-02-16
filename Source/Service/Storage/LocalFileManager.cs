@@ -1,6 +1,6 @@
 ﻿using System.IO;
 
-namespace Service
+namespace Service.Storage
 {
     public class LocalFileManager : IFileManager
     {
