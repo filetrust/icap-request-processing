@@ -1,12 +1,18 @@
 using Glasswall.Core.Engine.Common.FileProcessing;
+using Glasswall.Core.Engine.Common.PolicyConfig;
 using Glasswall.Core.Engine.Messaging;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using NUnit.Framework;
+using Service.Configuration;
+using Service.Engine;
 using Service.ErrorReport;
 using Service.Messaging;
+using Service.NCFS;
+using Service.Storage;
 using Service.StoreMessages.Enums;
+using Service.TransactionEvent;
 using System;
 using System.Linq;
 using System.Text;
@@ -19,13 +25,13 @@ namespace Service.Tests
     {
         public class ProcessMethodTests : TransactionEventProcessorTests
         {
-            private Mock<IGlasswallFileProcessor> _mockGlasswallFileProcessor;
-            private Mock<IGlasswallVersionService> _mockGlasswallVersionService;
+            private Mock<IGlasswallEngineService> _mockGlasswallFileProcessor;
             private Mock<IOutcomeSender> _mockOutcomeSender;
             private Mock<ITransactionEventSender> _mockTransactionEventSender;
             private Mock<IArchiveRequestSender> _mockArchiveRequestSender;
             private Mock<IFileManager> _mockFileManager;
             private Mock<IErrorReportGenerator> _mockErrorReportGenerator;
+            private Mock<INcfsProcessor> _mockNcfsProcessor;
             private Mock<IFileProcessorConfig> _mockConfig;
             private Mock<ILogger<TransactionEventProcessor>> _mockLogger;
 
@@ -34,13 +40,13 @@ namespace Service.Tests
             [SetUp]
             public void SetUp()
             {
-                _mockGlasswallFileProcessor = new Mock<IGlasswallFileProcessor>();
-                _mockGlasswallVersionService = new Mock<IGlasswallVersionService>();
+                _mockGlasswallFileProcessor = new Mock<IGlasswallEngineService>();
                 _mockOutcomeSender = new Mock<IOutcomeSender>();
                 _mockTransactionEventSender = new Mock<ITransactionEventSender>();
                 _mockArchiveRequestSender = new Mock<IArchiveRequestSender>();
                 _mockFileManager = new Mock<IFileManager>();
                 _mockErrorReportGenerator = new Mock<IErrorReportGenerator>();
+                _mockNcfsProcessor = new Mock<INcfsProcessor>();
                 _mockConfig = new Mock<IFileProcessorConfig>();
                 _mockLogger = new Mock<ILogger<TransactionEventProcessor>>();
 
@@ -49,12 +55,12 @@ namespace Service.Tests
 
                 _transactionEventProcessor = new TransactionEventProcessor(
                     _mockGlasswallFileProcessor.Object,
-                    _mockGlasswallVersionService.Object,
                     _mockOutcomeSender.Object,
                     _mockTransactionEventSender.Object,
                     _mockArchiveRequestSender.Object,
                     _mockFileManager.Object,
                     _mockErrorReportGenerator.Object,
+                    _mockNcfsProcessor.Object,
                     _mockConfig.Object,
                     _mockLogger.Object);
             }
@@ -80,7 +86,7 @@ namespace Service.Tests
             {
                 // Arrange
                 _mockFileManager.Setup(s => s.FileExists(It.IsAny<string>())).Returns(true);
-                _mockGlasswallFileProcessor.Setup(s => s.GetFileType(It.IsAny<byte[]>())).Throws(new Exception());
+                _mockGlasswallFileProcessor.Setup(s => s.GetFileType(It.IsAny<byte[]>(), It.IsAny<string>())).Throws(new Exception());
 
                 // Act
                 _transactionEventProcessor.Process();
@@ -97,7 +103,7 @@ namespace Service.Tests
             {
                 // Arrange
                 _mockFileManager.Setup(s => s.FileExists(It.IsAny<string>())).Returns(true);
-                _mockGlasswallFileProcessor.Setup(s => s.GetFileType(It.IsAny<byte[]>())).Throws(new Exception());
+                _mockGlasswallFileProcessor.Setup(s => s.GetFileType(It.IsAny<byte[]>(), It.IsAny<string>())).Throws(new Exception());
 
                 // Act
                 _transactionEventProcessor.Process();
@@ -109,53 +115,14 @@ namespace Service.Tests
                     It.IsAny<string>()));
             }
 
-            [TestCase(NcfsOption.Relay, FileOutcome.Unmodified)]
-            [TestCase(NcfsOption.Block, FileOutcome.Failed)]
-            public void Correct_Outcome_Is_Sent_When_FileType_Is_Unknown(NcfsOption unprocessableAction, string expected)
-            {
-                // Arrange
-                _mockGlasswallFileProcessor.Setup(s => s.GetFileType(It.IsAny<byte[]>())).Returns(new FileTypeDetectionResponse(FileType.Unknown));
-                _mockConfig.SetupGet(s => s.UnprocessableFileTypeAction).Returns(unprocessableAction);
-                _mockFileManager.Setup(s => s.FileExists(It.IsAny<string>())).Returns(true);
-
-                // Act
-                _transactionEventProcessor.Process();
-
-                // Assert
-                _mockOutcomeSender.Verify(s => s.Send(
-                    It.Is<string>(status => status == expected),
-                    It.IsAny<string>(),
-                    It.IsAny<string>()));
-            }
-
-            [TestCase(NcfsOption.Relay, FileOutcome.Unmodified)]
-            [TestCase(NcfsOption.Block, FileOutcome.Failed)]
-            public void Correct_Outcome_Is_Sent_When_File_Is_Not_Rebuilt(NcfsOption blockAction, string expected)
-            {
-                // Arrange
-                _mockGlasswallFileProcessor.Setup(s => s.GetFileType(It.IsAny<byte[]>())).Returns(new FileTypeDetectionResponse(FileType.Doc));
-                _mockGlasswallFileProcessor.Setup(s => s.RebuildFile(It.IsAny<byte[]>(), It.IsAny<string>())).Returns((byte[])null);
-                _mockConfig.SetupGet(s => s.GlasswallBlockedFilesAction).Returns(blockAction);
-                _mockFileManager.Setup(s => s.FileExists(It.IsAny<string>())).Returns(true);
-
-                // Act
-                _transactionEventProcessor.Process();
-
-                // Assert
-                _mockOutcomeSender.Verify(s => s.Send(
-                    It.Is<string>(status => status == expected),
-                    It.IsAny<string>(),
-                    It.IsAny<string>()));
-            }
-
             [Test]
             public void Correct_Outcome_Is_Sent_When_File_Is_Rebuilt()
             {
                 // Arrange
                 const string expected = FileOutcome.Replace;
 
-                _mockGlasswallFileProcessor.Setup(s => s.GetFileType(It.IsAny<byte[]>())).Returns(new FileTypeDetectionResponse(FileType.Doc));
-                _mockGlasswallFileProcessor.Setup(s => s.RebuildFile(It.IsAny<byte[]>(), It.IsAny<string>())).Returns(Encoding.UTF8.GetBytes("Rebuilt File"));
+                _mockGlasswallFileProcessor.Setup(s => s.GetFileType(It.IsAny<byte[]>(), It.IsAny<string>())).Returns(new FileTypeDetectionResponse(FileType.Doc));
+                _mockGlasswallFileProcessor.Setup(s => s.RebuildFile(It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ContentManagementFlags>())).Returns(Encoding.UTF8.GetBytes("Rebuilt File"));
                 _mockConfig.SetupGet(s => s.PolicyId).Returns(Guid.NewGuid());
                 _mockFileManager.Setup(s => s.FileExists(It.IsAny<string>())).Returns(true);
 
@@ -182,7 +149,7 @@ namespace Service.Tests
                 const string expectedInput = "InputPathHere";
                 const string expectedOutput = "OutputPathHere";
 
-                _mockGlasswallFileProcessor.Setup(s => s.GetFileType(It.IsAny<byte[]>())).Returns(new FileTypeDetectionResponse(fileType));
+                _mockGlasswallFileProcessor.Setup(s => s.GetFileType(It.IsAny<byte[]>(), It.IsAny<string>())).Returns(new FileTypeDetectionResponse(fileType));
                 _mockConfig.SetupGet(s => s.PolicyId).Returns(Guid.NewGuid());
                 _mockConfig.SetupGet(s => s.FileId).Returns(expectedFileId);
                 _mockConfig.SetupGet(s => s.InputPath).Returns(expectedInput);
@@ -213,8 +180,8 @@ namespace Service.Tests
 
                 var reportBytes = Encoding.UTF8.GetBytes(expectedReport);
 
-                _mockGlasswallFileProcessor.Setup(s => s.GetFileType(It.IsAny<byte[]>())).Returns(new FileTypeDetectionResponse(FileType.Doc));
-                _mockGlasswallFileProcessor.Setup(s => s.RebuildFile(It.IsAny<byte[]>(), It.IsAny<string>())).Returns((byte[])null);
+                _mockGlasswallFileProcessor.Setup(s => s.GetFileType(It.IsAny<byte[]>(), It.IsAny<string>())).Returns(new FileTypeDetectionResponse(FileType.Doc));
+                _mockGlasswallFileProcessor.Setup(s => s.RebuildFile(It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ContentManagementFlags>())).Returns((byte[])null);
                 _mockConfig.SetupGet(s => s.GlasswallBlockedFilesAction).Returns(NcfsOption.Block);
                 _mockConfig.SetupGet(s => s.FileId).Returns(expectedFileId);
                 _mockConfig.SetupGet(s => s.GenerateReport).Returns(true);
@@ -242,8 +209,8 @@ namespace Service.Tests
                 // Arrange
                 var expectedFileId = Guid.NewGuid().ToString();
 
-                _mockGlasswallFileProcessor.Setup(s => s.GetFileType(It.IsAny<byte[]>())).Returns(new FileTypeDetectionResponse(FileType.Doc));
-                _mockGlasswallFileProcessor.Setup(s => s.RebuildFile(It.IsAny<byte[]>(), It.IsAny<string>())).Returns((byte[])null);
+                _mockGlasswallFileProcessor.Setup(s => s.GetFileType(It.IsAny<byte[]>(), It.IsAny<string>())).Returns(new FileTypeDetectionResponse(FileType.Doc));
+                _mockGlasswallFileProcessor.Setup(s => s.RebuildFile(It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ContentManagementFlags>())).Returns((byte[])null);
                 _mockConfig.SetupGet(s => s.GlasswallBlockedFilesAction).Returns(NcfsOption.Block);
                 _mockConfig.SetupGet(s => s.FileId).Returns(expectedFileId);
                 _mockConfig.SetupGet(s => s.GenerateReport).Returns(false);
@@ -268,7 +235,7 @@ namespace Service.Tests
 
                 var reportBytes = Encoding.UTF8.GetBytes(expectedReport);
 
-                _mockGlasswallFileProcessor.Setup(s => s.GetFileType(It.IsAny<byte[]>())).Throws(new Exception());
+                _mockGlasswallFileProcessor.Setup(s => s.GetFileType(It.IsAny<byte[]>(), It.IsAny<string>())).Throws(new Exception());
                 _mockConfig.SetupGet(s => s.FileId).Returns(expectedFileId);
                 _mockConfig.SetupGet(s => s.GenerateReport).Returns(true);
                 _mockConfig.SetupGet(s => s.OutputPath).Returns(expectedOutputPath);
@@ -304,9 +271,9 @@ namespace Service.Tests
                 _mockConfig.SetupGet(s => s.GenerateReport).Returns(true);
                 _mockConfig.SetupGet(s => s.OutputPath).Returns(expectedOutputPath);
 
-                _mockGlasswallFileProcessor.Setup(s => s.GetFileType(It.IsAny<byte[]>())).Returns(new FileTypeDetectionResponse(FileType.Doc));
-                _mockGlasswallFileProcessor.Setup(s => s.RebuildFile(It.IsAny<byte[]>(), It.IsAny<string>()))
-                    .Callback((byte[] f, string t) => Task.Delay(TimeSpan.FromMinutes(10)).Wait());
+                _mockGlasswallFileProcessor.Setup(s => s.GetFileType(It.IsAny<byte[]>(), It.IsAny<string>())).Returns(new FileTypeDetectionResponse(FileType.Doc));
+                _mockGlasswallFileProcessor.Setup(s => s.RebuildFile(It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ContentManagementFlags>()))
+                    .Callback((byte[] f, string t, string id, ContentManagementFlags cmf) => Task.Delay(TimeSpan.FromMinutes(10)).Wait());
                 _mockFileManager.Setup(m => m.FileExists(It.IsAny<string>())).Returns(true);
 
                 _mockErrorReportGenerator.Setup(s => s.CreateReport(
@@ -328,9 +295,9 @@ namespace Service.Tests
             [Test]
             public void Long_Running_Process_Should_Clear_Output_Store()
             {
-                _mockGlasswallFileProcessor.Setup(s => s.GetFileType(It.IsAny<byte[]>())).Returns(new FileTypeDetectionResponse(FileType.Doc));
-                _mockGlasswallFileProcessor.Setup(s => s.RebuildFile(It.IsAny<byte[]>(), It.IsAny<string>()))
-                    .Callback((byte[] f, string t) => Task.Delay(TimeSpan.FromMinutes(10)).Wait());
+                _mockGlasswallFileProcessor.Setup(s => s.GetFileType(It.IsAny<byte[]>(), It.IsAny<string>())).Returns(new FileTypeDetectionResponse(FileType.Doc));
+                _mockGlasswallFileProcessor.Setup(s => s.RebuildFile(It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ContentManagementFlags>()))
+                    .Callback((byte[] f, string t, string id, ContentManagementFlags cmf) => Task.Delay(TimeSpan.FromMinutes(10)).Wait());
                 _mockFileManager.Setup(m => m.FileExists(It.IsAny<string>())).Returns(true);
 
                 _mockConfig.SetupGet(s => s.PolicyId).Returns(Guid.NewGuid());
@@ -343,8 +310,8 @@ namespace Service.Tests
             [Test]
             public void Exception_Thrown_In_Process_Should_Clear_Output_Store()
             {
-                _mockGlasswallFileProcessor.Setup(s => s.GetFileType(It.IsAny<byte[]>())).Returns(new FileTypeDetectionResponse(FileType.Doc));
-                _mockGlasswallFileProcessor.Setup(s => s.RebuildFile(It.IsAny<byte[]>(), It.IsAny<string>()))
+                _mockGlasswallFileProcessor.Setup(s => s.GetFileType(It.IsAny<byte[]>(), It.IsAny<string>())).Returns(new FileTypeDetectionResponse(FileType.Doc));
+                _mockGlasswallFileProcessor.Setup(s => s.RebuildFile(It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ContentManagementFlags>()))
                     .Throws(new Exception());
                 _mockFileManager.Setup(m => m.DeleteFile(It.IsAny<string>()));
                 _mockFileManager.Setup(m => m.FileExists(It.IsAny<string>())).Returns(true);
