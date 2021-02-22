@@ -7,6 +7,7 @@ using Service.Storage;
 using Service.StoreMessages.Enums;
 using Service.StoreMessages.Events;
 using System;
+using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -17,16 +18,21 @@ namespace Service.NCFS
         private readonly INcfsClient _ncfsClient;
         private readonly ITransactionEventSender _transactionEventSender;
         private readonly IFileManager _fileManager;
-        private readonly IErrorReportGenerator _errorReportGenerator;
         private readonly IFileProcessorConfig _config;
         private readonly ILogger<NcfsProcessor> _logger;
 
-        public NcfsProcessor(INcfsClient ncfsClient, ITransactionEventSender transactionEventSender, IFileManager fileManager, IErrorReportGenerator errorReportGenerator, IFileProcessorConfig config, ILogger<NcfsProcessor> logger)
+        private readonly Dictionary<NcfsDecision, string> _decisionMappings = new Dictionary<NcfsDecision, string>() 
+        {
+            { NcfsDecision.Block, FileOutcome.Failed },
+            { NcfsDecision.Relay, FileOutcome.Unmodified },
+            { NcfsDecision.Replace, FileOutcome.Replace }
+        };
+
+        public NcfsProcessor(INcfsClient ncfsClient, ITransactionEventSender transactionEventSender, IFileManager fileManager, IFileProcessorConfig config, ILogger<NcfsProcessor> logger)
         {
             _ncfsClient = ncfsClient ?? throw new ArgumentNullException(nameof(ncfsClient));
             _transactionEventSender = transactionEventSender ?? throw new ArgumentNullException(nameof(transactionEventSender));
             _fileManager = fileManager ?? throw new ArgumentNullException(nameof(fileManager));
-            _errorReportGenerator = errorReportGenerator ?? throw new ArgumentNullException(nameof(errorReportGenerator));
             _config = config ?? throw new ArgumentNullException(nameof(config));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
@@ -41,18 +47,12 @@ namespace Service.NCFS
 
                 _transactionEventSender.Send(new NcfsCompletedEvent(decision.ToString(), _config.FileId, timestamp));
 
-                return decision == NcfsDecision.Relay ? FileOutcome.Unmodified : FileOutcome.Replace;
+                return _decisionMappings[decision];
             }
-            else if (_config.UnprocessableFileTypeAction == NcfsOption.Block)
-            {
-                _logger.LogInformation($"File Id: {_config.FileId} Policy has Block setting, generating error report.");
-                GenerateErrorReport();
-                return FileOutcome.Replace;
-            }
-            else
-            {
-                return FileOutcome.Unmodified;
-            }
+
+            return _config.UnprocessableFileTypeAction == NcfsOption.Block 
+                ? FileOutcome.Failed 
+                : FileOutcome.Unmodified;
         }
 
         public async Task<string> GetBlockedActionAsync(DateTime timestamp, string base64File, FileType fileType)
@@ -65,18 +65,12 @@ namespace Service.NCFS
 
                 _transactionEventSender.Send(new NcfsCompletedEvent(decision.ToString(), _config.FileId, timestamp));
 
-                return decision == NcfsDecision.Relay ? FileOutcome.Unmodified : FileOutcome.Replace;
+                return _decisionMappings[decision];
             }
-            else if (_config.GlasswallBlockedFilesAction == NcfsOption.Block)
-            {
-                _logger.LogInformation($"File Id: {_config.FileId} Policy has Block setting, generating error report.");
-                GenerateErrorReport();
-                return FileOutcome.Replace;
-            }
-            else
-            {
-                return FileOutcome.Unmodified;
-            }
+
+            return _config.GlasswallBlockedFilesAction == NcfsOption.Block 
+                ? FileOutcome.Failed 
+                : FileOutcome.Unmodified;
         }
 
         private async Task<NcfsDecision> CallNcfsApi(string base64File, FileType fileType)
@@ -93,22 +87,8 @@ namespace Service.NCFS
 
                 _fileManager.WriteFile(_config.OutputPath, Encoding.UTF8.GetBytes(response.Base64Replacement));
             }
-            else if (response.NcfsDecision == NcfsDecision.Block)
-            {
-                _logger.LogInformation($"File Id: {_config.FileId} Received Block response, generating error report.");
-                GenerateErrorReport();
-            }
 
             return response.NcfsDecision;
-        }
-
-        private void GenerateErrorReport()
-        {
-            if (_config.GenerateReport)
-            {
-                var report = _errorReportGenerator.CreateReport(_config.FileId);
-                _fileManager.WriteFile(_config.OutputPath, Encoding.UTF8.GetBytes(report));
-            }
         }
     }
 }
