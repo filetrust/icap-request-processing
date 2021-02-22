@@ -5,6 +5,7 @@ using Flurl.Http;
 using Service.Configuration;
 using Glasswall.Core.Engine.Messaging;
 using Microsoft.Extensions.Logging;
+using Service.StoreMessages.Enums;
 
 namespace Service.NCFS
 {
@@ -34,9 +35,11 @@ namespace Service.NCFS
 
                 var responseJson = await response.GetJsonAsync();
 
+                _logger.LogInformation($"File Id: {_config.FileId} NCFS Status Message: {response.Headers.FirstOrDefault("ncfs-status-message") ?? "empty" }");
+
                 return new NcfsOutcome
                 {
-                    NcfsDecision = response.Headers.FirstOrDefault("ncfs-decision"),
+                    NcfsDecision = Enum.Parse<NcfsDecision>(response.Headers.FirstOrDefault("ncfs-decision")),
                     Base64Replacement = responseJson?.base64Replacement ?? string.Empty
                 };
             }
@@ -47,7 +50,7 @@ namespace Service.NCFS
 
                 return new NcfsOutcome
                 {
-                    NcfsDecision = FileOutcome.Failed
+                    NcfsDecision = NcfsDecision.Block
                 };
             }
             catch (Exception e)
@@ -56,7 +59,7 @@ namespace Service.NCFS
 
                 return new NcfsOutcome
                 {
-                    NcfsDecision = FileOutcome.Failed
+                    NcfsDecision = NcfsDecision.Block
                 };
             }
         }

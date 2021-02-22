@@ -1,9 +1,9 @@
 ﻿namespace Service.StoreMessages.Enums
 {
-    public enum GwOutcome
+    public enum NcfsDecision
     {
+        Relay,
         Replace,
-        Unmodified,
-        Failed
+        Block
     }
 }
