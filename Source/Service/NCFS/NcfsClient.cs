@@ -35,6 +35,8 @@ namespace Service.NCFS
 
                 var responseJson = await response.GetJsonAsync();
 
+                _logger.LogInformation($"File Id: {_config.FileId} NCFS Status Message: {response.Headers.FirstOrDefault("ncfs-status-message") ?? "empty" }");
+
                 return new NcfsOutcome
                 {
                     NcfsDecision = Enum.Parse<NcfsDecision>(response.Headers.FirstOrDefault("ncfs-decision")),
