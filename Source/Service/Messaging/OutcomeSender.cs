@@ -53,7 +53,7 @@ namespace Service.Messaging
             GC.SuppressFinalize(this);
         }
 
-        public void Send(string status, string fileId, string replyTo, Dictionary<string, string> optionalHeaders = null)
+        public void Send(string status, string fileId, string replyTo, IDictionary<string, string> optionalHeaders = null)
         {
             var headers = new Dictionary<string, object>()
                 {
