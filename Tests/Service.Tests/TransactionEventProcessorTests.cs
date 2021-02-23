@@ -327,6 +327,124 @@ namespace Service.Tests
 
                 _mockFileManager.Verify(m => m.DeleteFile(It.IsAny<string>()), Times.Once, "Store should be cleared in event of long running process");
             }
+
+            [Test]
+            public void OptionalHeaders_Are_Sent_When_Received_By_NCFS_On_BlockedAction()
+            {
+                // Arrange
+                const string dictionaryKey = "outcome-header-Content-Type";
+
+                var ncfsOutcome = new NcfsOutcome
+                {
+                    FileOutcome = FileOutcome.Replace,
+                    Base64Replacement = "REPLACEMENT BASE64",
+                    NcfsDecision = NcfsDecision.Replace,
+                    ReplacementMimeType = "text/html"
+                };
+
+                _mockGlasswallFileProcessor.Setup(s => s.GetFileType(It.IsAny<byte[]>(), It.IsAny<string>())).Returns(new FileTypeDetectionResponse(FileType.Doc));
+                _mockGlasswallFileProcessor.Setup(s => s.RebuildFile(It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ContentManagementFlags>())).Returns((byte[]) null);
+                _mockConfig.SetupGet(s => s.PolicyId).Returns(Guid.NewGuid());
+                _mockFileManager.Setup(s => s.FileExists(It.IsAny<string>())).Returns(true);
+                _mockNcfsProcessor.Setup(s => s.GetBlockedActionAsync(It.IsAny<DateTime>(), It.IsAny<string>(), It.IsAny<FileType>())).Returns(Task.FromResult(ncfsOutcome));
+
+                // Act
+                _transactionEventProcessor.Process();
+
+                // Assert
+                _mockOutcomeSender.Verify(s => s.Send(
+                    It.Is<string>(status => status == ncfsOutcome.FileOutcome),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.Is<Dictionary<string, string>>(dict => dict.ContainsKey(dictionaryKey) ? dict[dictionaryKey] == ncfsOutcome.ReplacementMimeType : false)));
+            }
+
+            [Test]
+            public void OptionalHeaders_Are_Not_Sent_When_Not_Received_By_NCFS_On_BlockedAction()
+            {
+                // Arrange
+                const string dictionaryKey = "outcome-header-Content-Type";
+
+                var ncfsOutcome = new NcfsOutcome
+                {
+                    FileOutcome = FileOutcome.Unmodified,
+                    NcfsDecision = NcfsDecision.Relay
+                };
+
+                _mockGlasswallFileProcessor.Setup(s => s.GetFileType(It.IsAny<byte[]>(), It.IsAny<string>())).Returns(new FileTypeDetectionResponse(FileType.Doc));
+                _mockGlasswallFileProcessor.Setup(s => s.RebuildFile(It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ContentManagementFlags>())).Returns((byte[])null);
+                _mockConfig.SetupGet(s => s.PolicyId).Returns(Guid.NewGuid());
+                _mockFileManager.Setup(s => s.FileExists(It.IsAny<string>())).Returns(true);
+                _mockNcfsProcessor.Setup(s => s.GetBlockedActionAsync(It.IsAny<DateTime>(), It.IsAny<string>(), It.IsAny<FileType>())).Returns(Task.FromResult(ncfsOutcome));
+
+                // Act
+                _transactionEventProcessor.Process();
+
+                // Assert
+                _mockOutcomeSender.Verify(s => s.Send(
+                    It.Is<string>(status => status == ncfsOutcome.FileOutcome),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.Is<Dictionary<string, string>>(dict => !dict.ContainsKey(dictionaryKey))));
+            }
+
+            [Test]
+            public void OptionalHeaders_Are_Sent_When_Received_By_NCFS_On_UnmanagedAction()
+            {
+                // Arrange
+                const string dictionaryKey = "outcome-header-Content-Type";
+
+                var ncfsOutcome = new NcfsOutcome
+                {
+                    FileOutcome = FileOutcome.Replace,
+                    Base64Replacement = "REPLACEMENT BASE64",
+                    NcfsDecision = NcfsDecision.Replace,
+                    ReplacementMimeType = "text/html"
+                };
+
+                _mockGlasswallFileProcessor.Setup(s => s.GetFileType(It.IsAny<byte[]>(), It.IsAny<string>())).Returns(new FileTypeDetectionResponse(FileType.Unknown));
+                _mockConfig.SetupGet(s => s.PolicyId).Returns(Guid.NewGuid());
+                _mockFileManager.Setup(s => s.FileExists(It.IsAny<string>())).Returns(true);
+                _mockNcfsProcessor.Setup(s => s.GetUnmanagedActionAsync(It.IsAny<DateTime>(), It.IsAny<string>(), It.IsAny<FileType>())).Returns(Task.FromResult(ncfsOutcome));
+
+                // Act
+                _transactionEventProcessor.Process();
+
+                // Assert
+                _mockOutcomeSender.Verify(s => s.Send(
+                    It.Is<string>(status => status == ncfsOutcome.FileOutcome),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.Is<Dictionary<string, string>>(dict => dict.ContainsKey(dictionaryKey) ? dict[dictionaryKey] == ncfsOutcome.ReplacementMimeType : false)));
+            }
+
+            [Test]
+            public void OptionalHeaders_Are_Not_Sent_When_Not_Received_By_NCFS_On_UnmanagedAction()
+            {
+                // Arrange
+                const string dictionaryKey = "outcome-header-Content-Type";
+
+                var ncfsOutcome = new NcfsOutcome
+                {
+                    FileOutcome = FileOutcome.Unmodified,
+                    NcfsDecision = NcfsDecision.Relay
+                };
+
+                _mockGlasswallFileProcessor.Setup(s => s.GetFileType(It.IsAny<byte[]>(), It.IsAny<string>())).Returns(new FileTypeDetectionResponse(FileType.Unknown));
+                _mockConfig.SetupGet(s => s.PolicyId).Returns(Guid.NewGuid());
+                _mockFileManager.Setup(s => s.FileExists(It.IsAny<string>())).Returns(true);
+                _mockNcfsProcessor.Setup(s => s.GetUnmanagedActionAsync(It.IsAny<DateTime>(), It.IsAny<string>(), It.IsAny<FileType>())).Returns(Task.FromResult(ncfsOutcome));
+
+                // Act
+                _transactionEventProcessor.Process();
+
+                // Assert
+                _mockOutcomeSender.Verify(s => s.Send(
+                    It.Is<string>(status => status == ncfsOutcome.FileOutcome),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.Is<Dictionary<string, string>>(dict => !dict.ContainsKey(dictionaryKey))));
+            }
         }
     }
 }

@@ -98,7 +98,7 @@ namespace Service.Tests.NCFS
                 var result = await _ncfsProcessor.GetUnmanagedActionAsync(timestamp, base64File, fileType);
 
                 // Assert
-                Assert.That(result, Is.EqualTo(expectedOutcome));
+                Assert.That(result.FileOutcome, Is.EqualTo(expectedOutcome));
             }
 
             [TestCase(NcfsDecision.Relay, FileOutcome.Unmodified)]
@@ -118,7 +118,7 @@ namespace Service.Tests.NCFS
                 var result = await _ncfsProcessor.GetUnmanagedActionAsync(timestamp, base64File, fileType);
 
                 // Assert
-                Assert.That(result, Is.EqualTo(expectedOutcome));
+                Assert.That(result.FileOutcome, Is.EqualTo(expectedOutcome));
             }
 
             [Test]
@@ -128,7 +128,6 @@ namespace Service.Tests.NCFS
                 var timestamp = DateTime.UtcNow;
                 var base64File = "Base64FileString";
                 var fileType = FileType.Doc;
-                var expectedOutcome = FileOutcome.Replace;
                 var expectedReplacement = "I AM THE REPLACEMENT BASE64";
                 var outputPath = "OUTPUT PATH";
 
@@ -142,7 +141,6 @@ namespace Service.Tests.NCFS
                 var result = await _ncfsProcessor.GetUnmanagedActionAsync(timestamp, base64File, fileType);
 
                 // Assert
-                Assert.That(result, Is.EqualTo(expectedOutcome));
                 _mockFileManager.Verify(s => s.WriteFile(
                     It.Is<string>(o => o == outputPath),
                     It.Is<byte[]>(file => file.Where((b, i) => b == replacementBytes[i]).Count() == replacementBytes.Length)), Times.Once);
@@ -229,7 +227,7 @@ namespace Service.Tests.NCFS
                 var result = await _ncfsProcessor.GetBlockedActionAsync(timestamp, base64File, fileType);
 
                 // Assert
-                Assert.That(result, Is.EqualTo(expectedOutcome));
+                Assert.That(result.FileOutcome, Is.EqualTo(expectedOutcome));
             }
 
             [TestCase(NcfsDecision.Relay, FileOutcome.Unmodified)]
@@ -249,7 +247,7 @@ namespace Service.Tests.NCFS
                 var result = await _ncfsProcessor.GetBlockedActionAsync(timestamp, base64File, fileType);
 
                 // Assert
-                Assert.That(result, Is.EqualTo(expectedOutcome));
+                Assert.That(result.FileOutcome, Is.EqualTo(expectedOutcome));
             }
 
             [Test]
@@ -259,7 +257,6 @@ namespace Service.Tests.NCFS
                 var timestamp = DateTime.UtcNow;
                 var base64File = "Base64FileString";
                 var fileType = FileType.Doc;
-                var expectedOutcome = FileOutcome.Replace;
                 var expectedReplacement = "I AM THE REPLACEMENT BASE64";
                 var outputPath = "OUTPUT PATH";
 
@@ -273,7 +270,6 @@ namespace Service.Tests.NCFS
                 var result = await _ncfsProcessor.GetBlockedActionAsync(timestamp, base64File, fileType);
 
                 // Assert
-                Assert.That(result, Is.EqualTo(expectedOutcome));
                 _mockFileManager.Verify(s => s.WriteFile(
                     It.Is<string>(o => o == outputPath),
                     It.Is<byte[]>(file => file.Where((b, i) => b == replacementBytes[i]).Count() == replacementBytes.Length)), Times.Once);
