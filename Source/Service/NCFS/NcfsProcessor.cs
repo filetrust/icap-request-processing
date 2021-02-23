@@ -53,14 +53,12 @@ namespace Service.NCFS
             }
             else
             {
-                var ncfsOutcome = new NcfsOutcome
+                return new NcfsOutcome
                 {
                     FileOutcome = _config.UnprocessableFileTypeAction == NcfsOption.Block
                     ? FileOutcome.Failed
                     : FileOutcome.Unmodified
                 };
-
-                return ncfsOutcome;
             }
         }
 
@@ -80,14 +78,12 @@ namespace Service.NCFS
             }
             else
             {
-                var ncfsOutcome = new NcfsOutcome
+                return new NcfsOutcome
                 {
                     FileOutcome = _config.GlasswallBlockedFilesAction == NcfsOption.Block
                     ? FileOutcome.Failed
                     : FileOutcome.Unmodified
                 };
-
-                return ncfsOutcome;
             }
         }
 
