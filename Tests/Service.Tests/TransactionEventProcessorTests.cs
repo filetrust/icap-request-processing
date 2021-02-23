@@ -14,6 +14,7 @@ using Service.Storage;
 using Service.StoreMessages.Enums;
 using Service.TransactionEvent;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -78,7 +79,8 @@ namespace Service.Tests
                 _mockOutcomeSender.Verify(s => s.Send(
                     It.Is<string>(status => status == FileOutcome.Failed),
                     It.IsAny<string>(),
-                    It.IsAny<string>()));
+                    It.IsAny<string>(),
+                    It.IsAny<Dictionary<string, string>>()));
             }
 
             [Test]
@@ -95,7 +97,8 @@ namespace Service.Tests
                 _mockOutcomeSender.Verify(s => s.Send(
                     It.Is<string>(status => status == FileOutcome.Failed),
                     It.IsAny<string>(),
-                    It.IsAny<string>()));
+                    It.IsAny<string>(),
+                    It.IsAny<Dictionary<string, string>>()));
             }
 
             [Test]
@@ -112,7 +115,8 @@ namespace Service.Tests
                 _mockOutcomeSender.Verify(s => s.Send(
                     It.Is<string>(status => status == FileOutcome.Failed),
                     It.IsAny<string>(),
-                    It.IsAny<string>()));
+                    It.IsAny<string>(),
+                    It.IsAny<Dictionary<string, string>>()));
             }
 
             [Test]
@@ -133,7 +137,8 @@ namespace Service.Tests
                 _mockOutcomeSender.Verify(s => s.Send(
                     It.Is<string>(status => status == expected),
                     It.IsAny<string>(),
-                    It.IsAny<string>()));
+                    It.IsAny<string>(),
+                    It.IsAny<Dictionary<string, string>>()));
             }
 
             [TestCase(FileType.Zip)]

@@ -6,7 +6,7 @@ namespace Service.NCFS
 {
     public interface INcfsProcessor
     {
-        Task<string> GetUnmanagedActionAsync(DateTime timestamp, string base64File, FileType fileType);
-        Task<string> GetBlockedActionAsync(DateTime timestamp, string base64File, FileType fileType);
+        Task<NcfsOutcome> GetUnmanagedActionAsync(DateTime timestamp, string base64File, FileType fileType);
+        Task<NcfsOutcome> GetBlockedActionAsync(DateTime timestamp, string base64File, FileType fileType);
     }
 }

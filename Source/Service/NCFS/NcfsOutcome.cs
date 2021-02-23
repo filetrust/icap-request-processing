@@ -5,6 +5,8 @@ namespace Service.NCFS
     public class NcfsOutcome
     {
         public NcfsDecision NcfsDecision { get; set; }
+        public string FileOutcome { get; set; }
         public string Base64Replacement { get; set; }
+        public string ReplacementMimeType { get; set; }
     }
 }

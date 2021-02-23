@@ -40,7 +40,8 @@ namespace Service.NCFS
                 return new NcfsOutcome
                 {
                     NcfsDecision = Enum.Parse<NcfsDecision>(response.Headers.FirstOrDefault("ncfs-decision")),
-                    Base64Replacement = responseJson?.base64Replacement ?? string.Empty
+                    Base64Replacement = responseJson?.base64Replacement ?? string.Empty,
+                    ReplacementMimeType = response.Headers.FirstOrDefault("ncfs-replacement-mimetype")
                 };
             }
             catch (FlurlHttpException ex)

@@ -37,43 +37,61 @@ namespace Service.NCFS
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public async Task<string> GetUnmanagedActionAsync(DateTime timestamp, string base64File, FileType fileType)
+        public async Task<NcfsOutcome> GetUnmanagedActionAsync(DateTime timestamp, string base64File, FileType fileType)
         {
             if (_config.UnprocessableFileTypeAction == NcfsOption.Refer)
             {
                 _transactionEventSender.Send(new NcfsStartedEvent(_config.FileId, timestamp));
 
-                var decision = await CallNcfsApi(base64File, fileType);
+                var ncfsOutcome = await CallNcfsApi(base64File, fileType);
 
-                _transactionEventSender.Send(new NcfsCompletedEvent(decision.ToString(), _config.FileId, timestamp));
+                _transactionEventSender.Send(new NcfsCompletedEvent(ncfsOutcome.NcfsDecision.ToString(), _config.FileId, timestamp));
 
-                return _decisionMappings[decision];
+                ncfsOutcome.FileOutcome = _decisionMappings[ncfsOutcome.NcfsDecision];
+
+                return ncfsOutcome;
             }
+            else
+            {
+                var ncfsOutcome = new NcfsOutcome
+                {
+                    FileOutcome = _config.UnprocessableFileTypeAction == NcfsOption.Block
+                    ? FileOutcome.Failed
+                    : FileOutcome.Unmodified
+                };
 
-            return _config.UnprocessableFileTypeAction == NcfsOption.Block 
-                ? FileOutcome.Failed 
-                : FileOutcome.Unmodified;
+                return ncfsOutcome;
+            }
         }
 
-        public async Task<string> GetBlockedActionAsync(DateTime timestamp, string base64File, FileType fileType)
+        public async Task<NcfsOutcome> GetBlockedActionAsync(DateTime timestamp, string base64File, FileType fileType)
         {
             if (_config.GlasswallBlockedFilesAction == NcfsOption.Refer)
             {
                 _transactionEventSender.Send(new NcfsStartedEvent(_config.FileId, timestamp));
 
-                var decision = await CallNcfsApi(base64File, fileType);
+                var ncfsOutcome = await CallNcfsApi(base64File, fileType);
 
-                _transactionEventSender.Send(new NcfsCompletedEvent(decision.ToString(), _config.FileId, timestamp));
+                _transactionEventSender.Send(new NcfsCompletedEvent(ncfsOutcome.NcfsDecision.ToString(), _config.FileId, timestamp));
 
-                return _decisionMappings[decision];
+                ncfsOutcome.FileOutcome = _decisionMappings[ncfsOutcome.NcfsDecision];
+
+                return ncfsOutcome;
             }
+            else
+            {
+                var ncfsOutcome = new NcfsOutcome
+                {
+                    FileOutcome = _config.GlasswallBlockedFilesAction == NcfsOption.Block
+                    ? FileOutcome.Failed
+                    : FileOutcome.Unmodified
+                };
 
-            return _config.GlasswallBlockedFilesAction == NcfsOption.Block 
-                ? FileOutcome.Failed 
-                : FileOutcome.Unmodified;
+                return ncfsOutcome;
+            }
         }
 
-        private async Task<NcfsDecision> CallNcfsApi(string base64File, FileType fileType)
+        private async Task<NcfsOutcome> CallNcfsApi(string base64File, FileType fileType)
         {
             _logger.LogInformation($"File Id: {_config.FileId} Calling NCFS Api.");
 
@@ -88,7 +106,7 @@ namespace Service.NCFS
                 _fileManager.WriteFile(_config.OutputPath, Encoding.UTF8.GetBytes(response.Base64Replacement));
             }
 
-            return response.NcfsDecision;
+            return response;
         }
     }
 }

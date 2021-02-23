@@ -102,12 +102,20 @@ namespace Service.TransactionEvent
             var fileType = _glasswallEngineService.GetFileType(file, _config.FileId);
             _transactionEventSender.Send(new FileTypeDetectionEvent(fileType.FileTypeName, _config.FileId, timestamp));
 
-            string status;
+            var outcome = new Outcome();
+
             if (fileType.FileType == FileType.Unknown)
             {
                 var base64File = Convert.ToBase64String(file);
-                status = await _ncfsProcessor.GetUnmanagedActionAsync(timestamp, base64File, fileType.FileType);
-                _transactionEventSender.Send(new UnmanagedFileTypeActionEvent(status, _config.FileId, timestamp));
+                var ncfsOutcome = await _ncfsProcessor.GetUnmanagedActionAsync(timestamp, base64File, fileType.FileType);
+
+                outcome.Status = ncfsOutcome.FileOutcome;
+                if (!string.IsNullOrEmpty(ncfsOutcome.ReplacementMimeType))
+                {
+                    outcome.OptionalHeaders.Add("outcome-header-Content-Type", ncfsOutcome.ReplacementMimeType);
+                }
+
+                _transactionEventSender.Send(new UnmanagedFileTypeActionEvent(outcome.Status, _config.FileId, timestamp));
             }
             else if (_archiveTypes.Contains(fileType.FileType))
             {
@@ -117,17 +125,17 @@ namespace Service.TransactionEvent
             }
             else
             {
-                status = await ProcessFile(file, fileType.FileType, timestamp);
+                outcome = await ProcessFile(file, fileType.FileType, timestamp);
             }
 
-            if (status == FileOutcome.Failed)
+            if (outcome.Status == FileOutcome.Failed)
             {
                 CreateErrorReport();
             }
 
-            _outcomeSender.Send(status, _config.FileId, _config.ReplyTo);
+            _outcomeSender.Send(outcome.Status, _config.FileId, _config.ReplyTo, outcome.OptionalHeaders);
 
-            MetricsCounters.ProcCnt.WithLabels(status).Inc();
+            MetricsCounters.ProcCnt.WithLabels(outcome.Status).Inc();
         }
 
         private void CreateErrorReport()
@@ -139,9 +147,9 @@ namespace Service.TransactionEvent
             }
         }
 
-        private async Task<string> ProcessFile(byte[] file, FileType filetype, DateTime timestamp)
+        private async Task<Outcome> ProcessFile(byte[] file, FileType filetype, DateTime timestamp)
         {
-            string status;
+            var outcome = new Outcome();
 
             var report = _glasswallEngineService.AnalyseFile(file, filetype.ToString(), _config.FileId);
             _transactionEventSender.Send(new AnalysisCompletedEvent(report, _config.FileId, timestamp));
@@ -153,18 +161,25 @@ namespace Service.TransactionEvent
             if (rebuiltFile == null || rebuiltFile.Length == 0)
             {
                 var base64File = Convert.ToBase64String(file);
-                status = await _ncfsProcessor.GetBlockedActionAsync(timestamp, base64File, filetype);
-                _transactionEventSender.Send(new BlockedFiletypeActionEvent(status, _config.FileId, timestamp));
+                var ncfsOutcome = await _ncfsProcessor.GetBlockedActionAsync(timestamp, base64File, filetype);
+
+                outcome.Status = ncfsOutcome.FileOutcome;
+                if (!string.IsNullOrEmpty(ncfsOutcome.ReplacementMimeType))
+                {
+                    outcome.OptionalHeaders.Add("outcome-header-Content-Type", ncfsOutcome.ReplacementMimeType);
+                }
+
+                _transactionEventSender.Send(new BlockedFiletypeActionEvent(outcome.Status, _config.FileId, timestamp));
             }
             else
             {
                 _fileManager.WriteFile(_config.OutputPath, rebuiltFile);
-                status = FileOutcome.Replace;
+                outcome.Status = FileOutcome.Replace;
             }
 
-            _transactionEventSender.Send(new RebuildCompletedEvent(status, _config.FileId, timestamp));
+            _transactionEventSender.Send(new RebuildCompletedEvent(outcome.Status, _config.FileId, timestamp));
 
-            return status;
+            return outcome;
         }
 
         private void ClearRebuiltStore(string path)
