@@ -63,10 +63,6 @@ namespace Service.TransactionEvent
             _fileProcessor.HandleAnalysis(file, _config.FileId, outcome.FileType, timestamp);
             await _fileProcessor.HandleRebuild(file, _config.FileId, outcome, _config.OutputPath, _config.ContentManagementFlags, timestamp);
 
-            //var outcome = await _fileProcessor.Process(file, timestamp);
-
-
-
             if (outcome.Status == FileOutcome.Failed)
             {
                 CreateErrorReport();
