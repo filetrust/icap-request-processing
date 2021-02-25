@@ -2,7 +2,7 @@
 
 namespace Service.TransactionEvent
 {
-    public interface ITransactionProcessor
+    public interface IAdaptationRequestProcessor
     {
         Task Process();
     }

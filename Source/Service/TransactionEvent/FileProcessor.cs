@@ -2,12 +2,15 @@
 using Service.StoreMessages.Events;
 using Service.Messaging;
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
 using Glasswall.Core.Engine.Common.PolicyConfig;
 using Microsoft.Extensions.Logging;
 using Service.Engine;
 using Service.Storage;
 using Service.NCFS;
+using Service.StoreMessages.Enums;
 
 namespace Service.TransactionEvent
 {
@@ -29,77 +32,98 @@ namespace Service.TransactionEvent
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public async Task<TransactionOutcome> HandleFileTypeDetection(byte[] file, string fileId, DateTime timestamp)
+        public byte[] HandleNewFileRead(string fileId, string policyId, string inputPath, DateTime timestamp)
+        {
+            _logger.LogInformation($"File Id:{fileId} Reading File from storage.");
+
+            _transactionEventSender.Send(new NewDocumentEvent(policyId, RequestMode.Response, fileId, timestamp));
+
+            if (!_fileManager.FileExists(inputPath))
+            {
+                throw new FileNotFoundException($"File Id: {inputPath} does not exist at {inputPath}.");
+            }
+
+            return _fileManager.ReadFile(inputPath);
+        }
+
+        public FileType HandleFileTypeDetection(byte[] file, string fileId, DateTime timestamp)
         {
             _logger.LogInformation($"File Id: {fileId} Using Glasswall Version: {_glasswallEngineService.GetGlasswallVersion()}");
+            _logger.LogInformation($"File Id:{fileId} Getting file type from engine.");
 
             var fileType = _glasswallEngineService.GetFileType(file, fileId);
             _transactionEventSender.Send(new FileTypeDetectionEvent(fileType.FileTypeName, fileId, timestamp));
 
-            var outcome = new TransactionOutcome
-            {
-                FileType = fileType.FileType
-            };
+            _logger.LogInformation($"File Id:{fileId} File type {fileType.FileType} file type from engine.");
 
-            if (outcome.FileType == FileType.Unknown)
-            {
-                await HandleUnmanagedFile(file, fileId, outcome, timestamp);
-            }
-
-            return outcome;
+            return fileType.FileType;
         }
 
         public void HandleAnalysis(byte[] file, string fileId, FileType fileType, DateTime timestamp)
         {
+            _logger.LogInformation($"File Id:{fileId} Getting Analysis Report.");
+
             var report = _glasswallEngineService.AnalyseFile(file, fileType.ToString(), fileId);
             _transactionEventSender.Send(new AnalysisCompletedEvent(report, fileId, timestamp));
         }
 
-        public async Task HandleRebuild(byte[] file, string fileId, TransactionOutcome outcome, string outputPath, ContentManagementFlags contentManagementFlags, DateTime timestamp)
+        public string HandleRebuild(byte[] file, string fileId, FileType fileType, string outputPath, ContentManagementFlags contentManagementFlags, DateTime timestamp)
         {
+            string outcome;
+
+            _logger.LogInformation($"File Id:{fileId} Rebuilding File.");
+
             _transactionEventSender.Send(new RebuildStartingEvent(fileId, timestamp));
 
-            var rebuiltFile = _glasswallEngineService.RebuildFile(file, outcome.FileType.ToString(), fileId, contentManagementFlags);
+            var rebuiltFile = _glasswallEngineService.RebuildFile(file, fileType.ToString(), fileId, contentManagementFlags);
 
             if (rebuiltFile == null || rebuiltFile.Length == 0)
             {
-                await HandleBlockedFile(file, fileId, outcome, timestamp);
+                outcome = FileOutcome.Failed;
             }
             else
             {
+                _logger.LogInformation($"File Id:{fileId} Successfully rebuilt file, writing to output.");
+
                 _fileManager.WriteFile(outputPath, rebuiltFile);
-                outcome.Status = FileOutcome.Replace;
+                outcome = FileOutcome.Replace;
             }
 
-            _transactionEventSender.Send(new RebuildCompletedEvent(outcome.Status, fileId, timestamp));
+            _transactionEventSender.Send(new RebuildCompletedEvent(outcome, fileId, timestamp));
+
+            return outcome;
         }
 
-        private async Task HandleUnmanagedFile(byte[] file, string fileId, TransactionOutcome outcome, DateTime timestamp)
+        public async Task<string> HandleUnmanagedFile(byte[] file, string fileId, FileType fileType, Dictionary<string, string> optionalHeaders, DateTime timestamp)
         {
             var base64File = Convert.ToBase64String(file);
-            var ncfsOutcome = await _ncfsProcessor.GetUnmanagedActionAsync(timestamp, base64File, outcome.FileType);
+            var ncfsOutcome = await _ncfsProcessor.GetUnmanagedActionAsync(timestamp, base64File, fileType);
 
-            outcome.Status = ncfsOutcome.FileOutcome;
+            var status = ncfsOutcome.FileOutcome;
             if (!string.IsNullOrEmpty(ncfsOutcome.ReplacementMimeType))
             {
-                outcome.OptionalHeaders.Add("outcome-header-Content-Type", ncfsOutcome.ReplacementMimeType);
+                optionalHeaders.Add("outcome-header-Content-Type", ncfsOutcome.ReplacementMimeType);
             }
 
-            _transactionEventSender.Send(new UnmanagedFileTypeActionEvent(outcome.Status, fileId, timestamp));
+            _transactionEventSender.Send(new UnmanagedFileTypeActionEvent(status, fileId, timestamp));
+
+            return status;
         }
 
-        private async Task HandleBlockedFile(byte[] file, string fileId, TransactionOutcome outcome, DateTime timestamp)
+        public async Task<string> HandleBlockedFile(byte[] file, string fileId, FileType fileType, Dictionary<string, string> optionalHeaders, DateTime timestamp)
         {
             var base64File = Convert.ToBase64String(file);
-            var ncfsOutcome = await _ncfsProcessor.GetBlockedActionAsync(timestamp, base64File, outcome.FileType);
+            var ncfsOutcome = await _ncfsProcessor.GetBlockedActionAsync(timestamp, base64File, fileType);
 
-            outcome.Status = ncfsOutcome.FileOutcome;
+            var status = ncfsOutcome.FileOutcome;
             if (!string.IsNullOrEmpty(ncfsOutcome.ReplacementMimeType))
             {
-                outcome.OptionalHeaders.Add("outcome-header-Content-Type", ncfsOutcome.ReplacementMimeType);
+                optionalHeaders.Add("outcome-header-Content-Type", ncfsOutcome.ReplacementMimeType);
             }
 
-            _transactionEventSender.Send(new BlockedFiletypeActionEvent(outcome.Status, fileId, timestamp));
+            _transactionEventSender.Send(new BlockedFiletypeActionEvent(status, fileId, timestamp));
+
+            return status;
         }
     } 
 }

@@ -14,19 +14,19 @@ namespace Service.TransactionEvent
 {
     public class Processor : IProcessor
     {
+        private readonly IAdaptationRequestProcessor _adaptationRequestProcessor;
         private readonly IOutcomeSender _outcomeSender;
         private readonly IFileManager _fileManager;
         private readonly IErrorReportGenerator _errorReportGenerator;
         private readonly IFileProcessorConfig _config;
         private readonly ILogger<Processor> _logger;
-        private readonly ITransactionProcessor _transactionProcessor;
 
         private readonly TimeSpan _processingTimeoutDuration;
 
-        public Processor(ITransactionProcessor transactionProcessor, IOutcomeSender outcomeSender, IFileManager fileManager, 
+        public Processor(IAdaptationRequestProcessor transactionProcessor, IOutcomeSender outcomeSender, IFileManager fileManager, 
             IErrorReportGenerator errorReportGenerator, IFileProcessorConfig config, ILogger<Processor> logger)
         {
-            _transactionProcessor = transactionProcessor ?? throw new ArgumentNullException(nameof(transactionProcessor));
+            _adaptationRequestProcessor = transactionProcessor ?? throw new ArgumentNullException(nameof(transactionProcessor));
             _outcomeSender = outcomeSender ?? throw new ArgumentNullException(nameof(outcomeSender));
             _fileManager = fileManager ?? throw new ArgumentNullException(nameof(fileManager));
             _errorReportGenerator = errorReportGenerator ?? throw new ArgumentNullException(nameof(errorReportGenerator));
@@ -40,7 +40,7 @@ namespace Service.TransactionEvent
         {
             using (MetricsCounters.ProcTime.NewTimer())
             {
-                var task = Task.Run(() => _transactionProcessor.Process());
+                var task = Task.Run(() => _adaptationRequestProcessor.Process());
 
                 try
                 {
