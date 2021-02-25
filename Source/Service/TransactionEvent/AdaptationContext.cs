@@ -17,7 +17,7 @@ namespace Service.TransactionEvent
         public string ReplyTo { get; set; }
         public bool GenerateErrorReport { get; set; }
         public Dictionary<string, string> OptionalHeaders { get; set; }
-        public Action<string, string, string, Dictionary<string, string>> OnSuccessEvent { get; set; }
+        public Action<string, string, string, Dictionary<string, string>> OnFinishEvent { get; set; }
         public Action<string, string, bool> OnFailedEvent { get; set; }
         public Action<string, string, string, string, string> OnArchiveEvent { get; set; }
         public Func<byte[], string, FileType, Dictionary<string, string>, DateTime, Task<string>> OnUnmanagedEvent { get; set; }

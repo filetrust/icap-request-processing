@@ -57,8 +57,8 @@ namespace Service.TransactionEvent
                 context.OnFailedEvent(context.FileId, context.OutputPath, context.GenerateErrorReport);
             }
 
-            _logger.LogInformation($"File Id:{context.FileId} Processing File finished, calling Success Event");
-            context.OnSuccessEvent(outcome, context.FileId, context.ReplyTo, context.OptionalHeaders);
+            _logger.LogInformation($"File Id:{context.FileId} Processing File finished, calling Finish Event");
+            context.OnFinishEvent(outcome, context.FileId, context.ReplyTo, context.OptionalHeaders);
         }
     }
 }

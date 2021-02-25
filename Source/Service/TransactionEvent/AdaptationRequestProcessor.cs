@@ -47,7 +47,7 @@ namespace Service.TransactionEvent
                 InputPath = _config.InputPath,
                 GenerateErrorReport = _config.GenerateReport,
                 ReplyTo = _config.ReplyTo,
-                OnSuccessEvent = (status, fileId, replyTo, optionalHeaders) =>
+                OnFinishEvent = (status, fileId, replyTo, optionalHeaders) =>
                 {
                     _outcomeSender.Send(status, fileId, replyTo, optionalHeaders);
                     MetricsCounters.ProcCnt.WithLabels(status).Inc();
