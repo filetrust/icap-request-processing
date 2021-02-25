@@ -37,13 +37,11 @@ namespace Service.TransactionEvent
 
         public async Task Process()
         {
-            var timestamp = DateTime.UtcNow;
-
             var context = new AdaptationContext
             {
                 FileId = _config.FileId,
                 ContentManagementFlags = _config.ContentManagementFlags,
-                TimeStamp = timestamp,
+                TimeStamp = DateTime.UtcNow,
                 OptionalHeaders = new Dictionary<string, string>(),
                 OutputPath = _config.OutputPath,
                 InputPath = _config.InputPath,
