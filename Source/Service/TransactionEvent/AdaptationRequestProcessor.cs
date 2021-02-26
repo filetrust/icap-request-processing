@@ -23,7 +23,7 @@ namespace Service.TransactionEvent
         private readonly IAdaptationRequestController _adaptationRequestController;
         private readonly IFileProcessorConfig _config;
 
-        public AdaptationRequestProcessor(IFileProcessor fileProcessor, IOutcomeSender outcomeSender, ITransactionEventSender transactionEventSender, IArchiveRequestSender archiveRequestSender,
+        public AdaptationRequestProcessor(IFileProcessor fileProcessor, IOutcomeSender outcomeSender, IArchiveRequestSender archiveRequestSender,
             IFileManager fileManager, IErrorReportGenerator errorReportGenerator, IAdaptationRequestController adaptationRequestController, IFileProcessorConfig config)
         {
             _fileProcessor = fileProcessor ?? throw new ArgumentNullException(nameof(fileProcessor));

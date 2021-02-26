@@ -22,6 +22,13 @@ namespace Service.TransactionEvent
         private readonly INcfsProcessor _ncfsProcessor;
         private readonly ILogger<FileProcessor> _logger;
 
+        private readonly Dictionary<NcfsDecision, string> _decisionMappings = new Dictionary<NcfsDecision, string>()
+        {
+            { NcfsDecision.Block, FileOutcome.Failed },
+            { NcfsDecision.Relay, FileOutcome.Unmodified },
+            { NcfsDecision.Replace, FileOutcome.Replace }
+        };
+
         public FileProcessor(IGlasswallEngineService glasswallEngineService,ITransactionEventSender transactionEventSender, 
             IFileManager fileManager, INcfsProcessor ncfsProcessor, ILogger<FileProcessor> logger)
         {
@@ -99,7 +106,7 @@ namespace Service.TransactionEvent
             var base64File = Convert.ToBase64String(file);
             var ncfsOutcome = await _ncfsProcessor.GetUnmanagedActionAsync(timestamp, base64File, fileType);
 
-            var status = ncfsOutcome.FileOutcome;
+            var status = _decisionMappings[ncfsOutcome.NcfsDecision];
             if (!string.IsNullOrEmpty(ncfsOutcome.ReplacementMimeType))
             {
                 optionalHeaders.Add("outcome-header-Content-Type", ncfsOutcome.ReplacementMimeType);
@@ -115,7 +122,7 @@ namespace Service.TransactionEvent
             var base64File = Convert.ToBase64String(file);
             var ncfsOutcome = await _ncfsProcessor.GetBlockedActionAsync(timestamp, base64File, fileType);
 
-            var status = ncfsOutcome.FileOutcome;
+            var status = _decisionMappings[ncfsOutcome.NcfsDecision];
             if (!string.IsNullOrEmpty(ncfsOutcome.ReplacementMimeType))
             {
                 optionalHeaders.Add("outcome-header-Content-Type", ncfsOutcome.ReplacementMimeType);

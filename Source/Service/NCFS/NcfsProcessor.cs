@@ -1,13 +1,11 @@
 ﻿using Glasswall.Core.Engine.Messaging;
 using Microsoft.Extensions.Logging;
 using Service.Configuration;
-using Service.ErrorReport;
 using Service.Messaging;
 using Service.Storage;
 using Service.StoreMessages.Enums;
 using Service.StoreMessages.Events;
 using System;
-using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -20,13 +18,6 @@ namespace Service.NCFS
         private readonly IFileManager _fileManager;
         private readonly IFileProcessorConfig _config;
         private readonly ILogger<NcfsProcessor> _logger;
-
-        private readonly Dictionary<NcfsDecision, string> _decisionMappings = new Dictionary<NcfsDecision, string>() 
-        {
-            { NcfsDecision.Block, FileOutcome.Failed },
-            { NcfsDecision.Relay, FileOutcome.Unmodified },
-            { NcfsDecision.Replace, FileOutcome.Replace }
-        };
 
         public NcfsProcessor(INcfsClient ncfsClient, ITransactionEventSender transactionEventSender, IFileManager fileManager, IFileProcessorConfig config, ILogger<NcfsProcessor> logger)
         {
@@ -47,19 +38,15 @@ namespace Service.NCFS
 
                 _transactionEventSender.Send(new NcfsCompletedEvent(ncfsOutcome.NcfsDecision.ToString(), _config.FileId, timestamp));
 
-                ncfsOutcome.FileOutcome = _decisionMappings[ncfsOutcome.NcfsDecision];
-
                 return ncfsOutcome;
             }
-            else
+
+            return new NcfsOutcome
             {
-                return new NcfsOutcome
-                {
-                    FileOutcome = _config.UnprocessableFileTypeAction == NcfsOption.Block
-                    ? FileOutcome.Failed
-                    : FileOutcome.Unmodified
-                };
-            }
+                NcfsDecision = _config.UnprocessableFileTypeAction == NcfsOption.Block
+                    ? NcfsDecision.Block
+                    : NcfsDecision.Relay
+            };
         }
 
         public async Task<NcfsOutcome> GetBlockedActionAsync(DateTime timestamp, string base64File, FileType fileType)
@@ -72,19 +59,15 @@ namespace Service.NCFS
 
                 _transactionEventSender.Send(new NcfsCompletedEvent(ncfsOutcome.NcfsDecision.ToString(), _config.FileId, timestamp));
 
-                ncfsOutcome.FileOutcome = _decisionMappings[ncfsOutcome.NcfsDecision];
-
                 return ncfsOutcome;
             }
-            else
+
+            return new NcfsOutcome
             {
-                return new NcfsOutcome
-                {
-                    FileOutcome = _config.GlasswallBlockedFilesAction == NcfsOption.Block
-                    ? FileOutcome.Failed
-                    : FileOutcome.Unmodified
-                };
-            }
+                NcfsDecision = _config.GlasswallBlockedFilesAction == NcfsOption.Block
+                    ? NcfsDecision.Block
+                    : NcfsDecision.Relay
+            };
         }
 
         private async Task<NcfsOutcome> CallNcfsApi(string base64File, FileType fileType)

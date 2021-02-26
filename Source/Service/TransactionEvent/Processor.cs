@@ -40,10 +40,10 @@ namespace Service.TransactionEvent
         {
             using (MetricsCounters.ProcTime.NewTimer())
             {
-                var task = Task.Run(() => _adaptationRequestProcessor.Process());
-
                 try
                 {
+                    var task = Task.Run(() => _adaptationRequestProcessor.Process());
+
                     bool isCompletedSuccessfully = task.Wait(_processingTimeoutDuration);
 
                     if (!isCompletedSuccessfully)
