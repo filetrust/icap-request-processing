@@ -40,6 +40,7 @@ namespace Service.TransactionEvent
             var context = new AdaptationContext
             {
                 FileId = _config.FileId,
+                PolicyId = _config.PolicyId.ToString(),
                 ContentManagementFlags = _config.ContentManagementFlags,
                 TimeStamp = DateTime.UtcNow,
                 OptionalHeaders = new Dictionary<string, string>(),
