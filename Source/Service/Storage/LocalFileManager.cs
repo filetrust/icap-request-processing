@@ -6,8 +6,7 @@ namespace Service.Storage
     {
         public void DeleteFile(string path)
         {
-            if (FileExists(path))
-                File.Delete(path);
+            File.Delete(path);
         }
 
         public bool FileExists(string path)
