@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Glasswall.Core.Engine.Common.PolicyConfig;
 using Glasswall.Core.Engine.Messaging;
 using NUnit.Framework;
@@ -400,6 +402,224 @@ namespace Service.Tests.TransactionEvent
                     rce.FileId == expectedFileId &&
                     rce.Timestamp == expectedTimeStamp &&
                     rce.GwOutcome == FileOutcome.Replace)));
+            }
+        }
+
+        public class HandleUnmanagedFileMethod : FileProcessorTests
+        {
+            private Mock<IGlasswallEngineService> _mockGlasswallEngineService;
+            private Mock<ITransactionEventSender> _mockTransactionEventSender;
+            private Mock<IFileManager> _mockFileManager;
+            private Mock<INcfsProcessor> _mockNcfsProcessor;
+            private Mock<ILogger<FileProcessor>> _mockLogger;
+
+            private FileProcessor _fileProcessor;
+
+            [SetUp]
+            public void Setup()
+            {
+                _mockGlasswallEngineService = new Mock<IGlasswallEngineService>();
+                _mockTransactionEventSender = new Mock<ITransactionEventSender>();
+                _mockFileManager = new Mock<IFileManager>();
+                _mockNcfsProcessor = new Mock<INcfsProcessor>();
+                _mockLogger = new Mock<ILogger<FileProcessor>>();
+
+                _fileProcessor = new FileProcessor(
+                    _mockGlasswallEngineService.Object,
+                    _mockTransactionEventSender.Object,
+                    _mockFileManager.Object,
+                    _mockNcfsProcessor.Object,
+                    _mockLogger.Object);
+            }
+
+            [Test]
+            public async Task Optional_Headers_Are_Added_If_Returned_By_NCFS()
+            {
+                // Arrange
+                const string expectedMimeType = "text/html";
+
+                var file = Encoding.UTF8.GetBytes("I AM FILE");
+                var optionalHeaders = new Dictionary<string, string>();
+
+                var outcome = new NcfsOutcome
+                {
+                    NcfsDecision = NcfsDecision.Replace,
+                    ReplacementMimeType = expectedMimeType
+                };
+
+                _mockNcfsProcessor.Setup(s => s.GetUnmanagedActionAsync(It.IsAny<DateTime>(), It.IsAny<string>(),
+                        It.IsAny<FileType>())).Returns(Task.FromResult(outcome));
+
+                // Act
+                await _fileProcessor.HandleUnmanagedFile(file, "fileId", FileType.Doc, optionalHeaders, DateTime.UtcNow);
+
+                // Assert
+                Assert.That(optionalHeaders.Count, Is.EqualTo(1));
+                Assert.That(optionalHeaders["outcome-header-Content-Type"], Is.EqualTo(expectedMimeType));
+            }
+
+            [TestCase(NcfsDecision.Block, FileOutcome.Failed)]
+            [TestCase(NcfsDecision.Relay, FileOutcome.Unmodified)]
+            [TestCase(NcfsDecision.Replace, FileOutcome.Replace)]
+            public async Task UnmanagedFileTypeActionEvent_Is_Sent_With_The_Correct_Outcome(NcfsDecision decision, string expectedOutcome)
+            {
+                // Arrange
+                var file = Encoding.UTF8.GetBytes("I AM FILE");
+                var expectedFileId = Guid.NewGuid().ToString();
+                var expectedTimeStamp = DateTime.UtcNow;
+                var optionalHeaders = new Dictionary<string, string>();
+
+                var outcome = new NcfsOutcome
+                {
+                    NcfsDecision = decision
+                };
+
+                _mockNcfsProcessor.Setup(s => s.GetUnmanagedActionAsync(It.IsAny<DateTime>(), It.IsAny<string>(),
+                    It.IsAny<FileType>())).Returns(Task.FromResult(outcome));
+
+                // Act
+                await _fileProcessor.HandleUnmanagedFile(file, expectedFileId, FileType.Doc, optionalHeaders, expectedTimeStamp);
+
+                // Assert
+                _mockTransactionEventSender.Verify(s => s.Send(It.Is<UnmanagedFileTypeActionEvent>(umfa =>
+                    umfa.FileId == expectedFileId &&
+                    umfa.Timestamp == expectedTimeStamp &&
+                    umfa.Action == expectedOutcome)));
+            }
+
+            [TestCase(NcfsDecision.Block, FileOutcome.Failed)]
+            [TestCase(NcfsDecision.Relay, FileOutcome.Unmodified)]
+            [TestCase(NcfsDecision.Replace, FileOutcome.Replace)]
+            public async Task Correct_Status_Is_Returned(NcfsDecision decision, string expectedOutcome)
+            {
+                // Arrange
+                var file = Encoding.UTF8.GetBytes("I AM FILE");
+                var expectedFileId = Guid.NewGuid().ToString();
+                var expectedTimeStamp = DateTime.UtcNow;
+                var optionalHeaders = new Dictionary<string, string>();
+
+                var outcome = new NcfsOutcome
+                {
+                    NcfsDecision = decision
+                };
+
+                _mockNcfsProcessor.Setup(s => s.GetUnmanagedActionAsync(It.IsAny<DateTime>(), It.IsAny<string>(),
+                    It.IsAny<FileType>())).Returns(Task.FromResult(outcome));
+
+                // Act
+                var status = await _fileProcessor.HandleUnmanagedFile(file, expectedFileId, FileType.Doc, optionalHeaders, expectedTimeStamp);
+
+                // Assert
+                Assert.That(status, Is.EqualTo(expectedOutcome));
+            }
+        }
+
+        public class HandleBlockedFileMethod : FileProcessorTests
+        {
+            private Mock<IGlasswallEngineService> _mockGlasswallEngineService;
+            private Mock<ITransactionEventSender> _mockTransactionEventSender;
+            private Mock<IFileManager> _mockFileManager;
+            private Mock<INcfsProcessor> _mockNcfsProcessor;
+            private Mock<ILogger<FileProcessor>> _mockLogger;
+
+            private FileProcessor _fileProcessor;
+
+            [SetUp]
+            public void Setup()
+            {
+                _mockGlasswallEngineService = new Mock<IGlasswallEngineService>();
+                _mockTransactionEventSender = new Mock<ITransactionEventSender>();
+                _mockFileManager = new Mock<IFileManager>();
+                _mockNcfsProcessor = new Mock<INcfsProcessor>();
+                _mockLogger = new Mock<ILogger<FileProcessor>>();
+
+                _fileProcessor = new FileProcessor(
+                    _mockGlasswallEngineService.Object,
+                    _mockTransactionEventSender.Object,
+                    _mockFileManager.Object,
+                    _mockNcfsProcessor.Object,
+                    _mockLogger.Object);
+            }
+
+            [Test]
+            public async Task Optional_Headers_Are_Added_If_Returned_By_NCFS()
+            {
+                // Arrange
+                const string expectedMimeType = "text/html";
+
+                var file = Encoding.UTF8.GetBytes("I AM FILE");
+                var optionalHeaders = new Dictionary<string, string>();
+
+                var outcome = new NcfsOutcome
+                {
+                    NcfsDecision = NcfsDecision.Replace,
+                    ReplacementMimeType = expectedMimeType
+                };
+
+                _mockNcfsProcessor.Setup(s => s.GetBlockedActionAsync(It.IsAny<DateTime>(), It.IsAny<string>(),
+                        It.IsAny<FileType>())).Returns(Task.FromResult(outcome));
+
+                // Act
+                await _fileProcessor.HandleBlockedFile(file, "fileId", FileType.Doc, optionalHeaders, DateTime.UtcNow);
+
+                // Assert
+                Assert.That(optionalHeaders.Count, Is.EqualTo(1));
+                Assert.That(optionalHeaders["outcome-header-Content-Type"], Is.EqualTo(expectedMimeType));
+            }
+
+            [TestCase(NcfsDecision.Block, FileOutcome.Failed)]
+            [TestCase(NcfsDecision.Relay, FileOutcome.Unmodified)]
+            [TestCase(NcfsDecision.Replace, FileOutcome.Replace)]
+            public async Task BlockedFiletypeActionEvent_Is_Sent_With_The_Correct_Outcome(NcfsDecision decision, string expectedOutcome)
+            {
+                // Arrange
+                var file = Encoding.UTF8.GetBytes("I AM FILE");
+                var expectedFileId = Guid.NewGuid().ToString();
+                var expectedTimeStamp = DateTime.UtcNow;
+                var optionalHeaders = new Dictionary<string, string>();
+
+                var outcome = new NcfsOutcome
+                {
+                    NcfsDecision = decision
+                };
+
+                _mockNcfsProcessor.Setup(s => s.GetBlockedActionAsync(It.IsAny<DateTime>(), It.IsAny<string>(),
+                    It.IsAny<FileType>())).Returns(Task.FromResult(outcome));
+
+                // Act
+                await _fileProcessor.HandleBlockedFile(file, expectedFileId, FileType.Doc, optionalHeaders, expectedTimeStamp);
+
+                // Assert
+                _mockTransactionEventSender.Verify(s => s.Send(It.Is<BlockedFiletypeActionEvent>(bfae =>
+                    bfae.FileId == expectedFileId &&
+                    bfae.Timestamp == expectedTimeStamp &&
+                    bfae.Action == expectedOutcome)));
+            }
+
+            [TestCase(NcfsDecision.Block, FileOutcome.Failed)]
+            [TestCase(NcfsDecision.Relay, FileOutcome.Unmodified)]
+            [TestCase(NcfsDecision.Replace, FileOutcome.Replace)]
+            public async Task Correct_Status_Is_Returned(NcfsDecision decision, string expectedOutcome)
+            {
+                // Arrange
+                var file = Encoding.UTF8.GetBytes("I AM FILE");
+                var expectedFileId = Guid.NewGuid().ToString();
+                var expectedTimeStamp = DateTime.UtcNow;
+                var optionalHeaders = new Dictionary<string, string>();
+
+                var outcome = new NcfsOutcome
+                {
+                    NcfsDecision = decision
+                };
+
+                _mockNcfsProcessor.Setup(s => s.GetBlockedActionAsync(It.IsAny<DateTime>(), It.IsAny<string>(),
+                    It.IsAny<FileType>())).Returns(Task.FromResult(outcome));
+
+                // Act
+                var status = await _fileProcessor.HandleBlockedFile(file, expectedFileId, FileType.Doc, optionalHeaders, expectedTimeStamp);
+
+                // Assert
+                Assert.That(status, Is.EqualTo(expectedOutcome));
             }
         }
     }
