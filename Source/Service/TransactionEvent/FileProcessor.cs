@@ -76,19 +76,15 @@ namespace Service.TransactionEvent
 
         public string HandleRebuild(byte[] file, string fileId, FileType fileType, string outputPath, ContentManagementFlags contentManagementFlags, DateTime timestamp)
         {
-            string outcome;
-
             _logger.LogInformation($"File Id:{fileId} Rebuilding File.");
 
             _transactionEventSender.Send(new RebuildStartingEvent(fileId, timestamp));
 
             var rebuiltFile = _glasswallEngineService.RebuildFile(file, fileType.ToString(), fileId, contentManagementFlags);
 
-            if (rebuiltFile == null || rebuiltFile.Length == 0)
-            {
-                outcome = FileOutcome.Failed;
-            }
-            else
+            var outcome = FileOutcome.Failed;
+
+            if (rebuiltFile != null && rebuiltFile.Length != 0)
             {
                 _logger.LogInformation($"File Id:{fileId} Successfully rebuilt file, writing to output.");
 

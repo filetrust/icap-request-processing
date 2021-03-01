@@ -1,5 +1,4 @@
-﻿
-using Service.Messaging;
+﻿using Service.Messaging;
 using System;
 using System.Threading.Tasks;
 using Service.ErrorReport;
