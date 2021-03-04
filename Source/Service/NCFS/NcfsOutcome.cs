@@ -6,5 +6,6 @@ namespace Service.NCFS
     {
         public NcfsDecision NcfsDecision { get; set; }
         public string Base64Replacement { get; set; }
+        public string ReplacementMimeType { get; set; }
     }
 }

@@ -43,7 +43,7 @@ namespace Service.Tests.NCFS
             [TestCase(NcfsDecision.Block)]
             [TestCase(NcfsDecision.Relay)]
             [TestCase(NcfsDecision.Replace)]
-            public async Task Successful_Call_To_The_API_Returns_Correct_Outcome(NcfsDecision expectedDecision)
+            public async Task Successful_Call_To_The_API_Returns_Correct_Decision(NcfsDecision expectedDecision)
             {
                 // Arrange
                 var expectedBase64 = "Expected Replacement";
@@ -55,7 +55,39 @@ namespace Service.Tests.NCFS
 
                 // Assert
                 Assert.That(result.NcfsDecision, Is.EqualTo(expectedDecision));
+            }
+
+            [Test]
+            public async Task Successful_Call_To_The_API_Returns_Base64_Replacement()
+            {
+                // Arrange
+                var expectedDecision = NcfsDecision.Replace;
+                var expectedBase64 = "Expected Replacement";
+
+                _httpTest.RespondWithJson(new { base64Replacement = expectedBase64 }, headers: new Dictionary<string, string>() { { "ncfs-decision", expectedDecision.ToString() } });
+
+                // Act
+                var result = await _client.GetOutcome("base64", FileType.Doc);
+
+                // Assert
                 Assert.That(result.Base64Replacement, Is.EqualTo(expectedBase64));
+            }
+
+            [Test]
+            public async Task Successful_Call_To_The_API_Returns_Replacement_MimeType()
+            {
+                // Arrange
+                var expectedDecision = NcfsDecision.Replace;
+                var expectedBase64 = "Expected Replacement";
+                var expectedMimeType = "text/json";
+
+                _httpTest.RespondWithJson(new { base64Replacement = expectedBase64 }, headers: new Dictionary<string, string>() { { "ncfs-decision", expectedDecision.ToString() }, { "ncfs-replacement-mimetype", expectedMimeType } });
+
+                // Act
+                var result = await _client.GetOutcome("base64", FileType.Doc);
+
+                // Assert
+                Assert.That(result.ReplacementMimeType, Is.EqualTo(expectedMimeType));
             }
 
             [Test]

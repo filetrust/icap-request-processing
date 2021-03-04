@@ -53,13 +53,21 @@ namespace Service.Messaging
             GC.SuppressFinalize(this);
         }
 
-        public void Send(string status, string fileId, string replyTo)
+        public void Send(string status, string fileId, string replyTo, IDictionary<string, string> optionalHeaders = null)
         {
             var headers = new Dictionary<string, object>()
                 {
                     { "file-id", fileId },
                     { "file-outcome", status },
                 };
+
+            if (optionalHeaders != null)
+            {
+                foreach (var header in optionalHeaders)
+                {
+                    headers.Add(header.Key, header.Value);
+                }
+            }
 
             var replyProps = _channel.CreateBasicProperties();
             replyProps.Headers = headers;

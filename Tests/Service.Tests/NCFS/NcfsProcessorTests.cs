@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
 using Service.Configuration;
-using Service.ErrorReport;
 using Service.Messaging;
 using Service.NCFS;
 using Service.Storage;
@@ -82,10 +81,10 @@ namespace Service.Tests.NCFS
                 _mockTransactionEventSender.Verify(s => s.Send(It.IsAny<NcfsCompletedEvent>()), Times.Never);
             }
 
-            [TestCase(NcfsOption.Block, FileOutcome.Failed)]
-            [TestCase(NcfsOption.Relay, FileOutcome.Unmodified)]
-            [TestCase(NcfsOption.NotSet, FileOutcome.Unmodified)]
-            public async Task Configured_Outcome_Is_Used_When_Actions_IsNot_Refer(NcfsOption option, string expectedOutcome)
+            [TestCase(NcfsOption.Block, NcfsDecision.Block)]
+            [TestCase(NcfsOption.Relay, NcfsDecision.Relay)]
+            [TestCase(NcfsOption.NotSet, NcfsDecision.Relay)]
+            public async Task Configured_Outcome_Is_Used_When_Actions_IsNot_Refer(NcfsOption option, NcfsDecision expectedDecision)
             {
                 // Arrange
                 var timestamp = DateTime.UtcNow;
@@ -98,13 +97,13 @@ namespace Service.Tests.NCFS
                 var result = await _ncfsProcessor.GetUnmanagedActionAsync(timestamp, base64File, fileType);
 
                 // Assert
-                Assert.That(result, Is.EqualTo(expectedOutcome));
+                Assert.That(result.NcfsDecision, Is.EqualTo(expectedDecision));
             }
 
-            [TestCase(NcfsDecision.Relay, FileOutcome.Unmodified)]
-            [TestCase(NcfsDecision.Replace, FileOutcome.Replace)]
-            [TestCase(NcfsDecision.Block, FileOutcome.Failed)]
-            public async Task Ncfs_Api_Is_Used_When_Action_Is_Refer_And_Outcome_Is_Correct(NcfsDecision decision, string expectedOutcome)
+            [TestCase(NcfsDecision.Relay)]
+            [TestCase(NcfsDecision.Replace)]
+            [TestCase(NcfsDecision.Block)]
+            public async Task Ncfs_Api_Is_Used_When_Action_Is_Refer_And_Outcome_Is_Correct(NcfsDecision expectedDecision)
             {
                 // Arrange
                 var timestamp = DateTime.UtcNow;
@@ -112,13 +111,13 @@ namespace Service.Tests.NCFS
                 var fileType = FileType.Doc;
 
                 _mockConfig.SetupGet(s => s.UnprocessableFileTypeAction).Returns(NcfsOption.Refer);
-                _mockNcfsClient.Setup(s => s.GetOutcome(It.IsAny<string>(), It.IsAny<FileType>())).Returns(Task.FromResult(new NcfsOutcome { NcfsDecision = decision, Base64Replacement = "REPLACEMENT" }));
+                _mockNcfsClient.Setup(s => s.GetOutcome(It.IsAny<string>(), It.IsAny<FileType>())).Returns(Task.FromResult(new NcfsOutcome { NcfsDecision = expectedDecision, Base64Replacement = "REPLACEMENT" }));
 
                 // Act
                 var result = await _ncfsProcessor.GetUnmanagedActionAsync(timestamp, base64File, fileType);
 
                 // Assert
-                Assert.That(result, Is.EqualTo(expectedOutcome));
+                Assert.That(result.NcfsDecision, Is.EqualTo(expectedDecision));
             }
 
             [Test]
@@ -128,7 +127,6 @@ namespace Service.Tests.NCFS
                 var timestamp = DateTime.UtcNow;
                 var base64File = "Base64FileString";
                 var fileType = FileType.Doc;
-                var expectedOutcome = FileOutcome.Replace;
                 var expectedReplacement = "I AM THE REPLACEMENT BASE64";
                 var outputPath = "OUTPUT PATH";
 
@@ -142,7 +140,6 @@ namespace Service.Tests.NCFS
                 var result = await _ncfsProcessor.GetUnmanagedActionAsync(timestamp, base64File, fileType);
 
                 // Assert
-                Assert.That(result, Is.EqualTo(expectedOutcome));
                 _mockFileManager.Verify(s => s.WriteFile(
                     It.Is<string>(o => o == outputPath),
                     It.Is<byte[]>(file => file.Where((b, i) => b == replacementBytes[i]).Count() == replacementBytes.Length)), Times.Once);
@@ -213,10 +210,10 @@ namespace Service.Tests.NCFS
                 _mockTransactionEventSender.Verify(s => s.Send(It.IsAny<NcfsCompletedEvent>()), Times.Never);
             }
 
-            [TestCase(NcfsOption.Block, FileOutcome.Failed)]
-            [TestCase(NcfsOption.Relay, FileOutcome.Unmodified)]
-            [TestCase(NcfsOption.NotSet, FileOutcome.Unmodified)]
-            public async Task Configured_Outcome_Is_Used_When_Actions_IsNot_Refer(NcfsOption option, string expectedOutcome)
+            [TestCase(NcfsOption.Block, NcfsDecision.Block)]
+            [TestCase(NcfsOption.Relay, NcfsDecision.Relay)]
+            [TestCase(NcfsOption.NotSet, NcfsDecision.Relay)]
+            public async Task Configured_Outcome_Is_Used_When_Actions_IsNot_Refer(NcfsOption option, NcfsDecision expectedDecision)
             {
                 // Arrange
                 var timestamp = DateTime.UtcNow;
@@ -229,13 +226,13 @@ namespace Service.Tests.NCFS
                 var result = await _ncfsProcessor.GetBlockedActionAsync(timestamp, base64File, fileType);
 
                 // Assert
-                Assert.That(result, Is.EqualTo(expectedOutcome));
+                Assert.That(result.NcfsDecision, Is.EqualTo(expectedDecision));
             }
 
-            [TestCase(NcfsDecision.Relay, FileOutcome.Unmodified)]
-            [TestCase(NcfsDecision.Replace, FileOutcome.Replace)]
-            [TestCase(NcfsDecision.Block, FileOutcome.Failed)]
-            public async Task Ncfs_Api_Is_Used_When_Action_Is_Refer_And_Outcome_Is_Correct(NcfsDecision decision, string expectedOutcome)
+            [TestCase(NcfsDecision.Relay)]
+            [TestCase(NcfsDecision.Replace)]
+            [TestCase(NcfsDecision.Block)]
+            public async Task Ncfs_Api_Is_Used_When_Action_Is_Refer_And_Outcome_Is_Correct(NcfsDecision expectedDecision)
             {
                 // Arrange
                 var timestamp = DateTime.UtcNow;
@@ -243,13 +240,13 @@ namespace Service.Tests.NCFS
                 var fileType = FileType.Doc;
 
                 _mockConfig.SetupGet(s => s.GlasswallBlockedFilesAction).Returns(NcfsOption.Refer);
-                _mockNcfsClient.Setup(s => s.GetOutcome(It.IsAny<string>(), It.IsAny<FileType>())).Returns(Task.FromResult(new NcfsOutcome { NcfsDecision = decision, Base64Replacement = "REPLACEMENT" }));
+                _mockNcfsClient.Setup(s => s.GetOutcome(It.IsAny<string>(), It.IsAny<FileType>())).Returns(Task.FromResult(new NcfsOutcome { NcfsDecision = expectedDecision, Base64Replacement = "REPLACEMENT" }));
 
                 // Act
                 var result = await _ncfsProcessor.GetBlockedActionAsync(timestamp, base64File, fileType);
 
                 // Assert
-                Assert.That(result, Is.EqualTo(expectedOutcome));
+                Assert.That(result.NcfsDecision, Is.EqualTo(expectedDecision));
             }
 
             [Test]
@@ -259,7 +256,6 @@ namespace Service.Tests.NCFS
                 var timestamp = DateTime.UtcNow;
                 var base64File = "Base64FileString";
                 var fileType = FileType.Doc;
-                var expectedOutcome = FileOutcome.Replace;
                 var expectedReplacement = "I AM THE REPLACEMENT BASE64";
                 var outputPath = "OUTPUT PATH";
 
@@ -273,7 +269,6 @@ namespace Service.Tests.NCFS
                 var result = await _ncfsProcessor.GetBlockedActionAsync(timestamp, base64File, fileType);
 
                 // Assert
-                Assert.That(result, Is.EqualTo(expectedOutcome));
                 _mockFileManager.Verify(s => s.WriteFile(
                     It.Is<string>(o => o == outputPath),
                     It.Is<byte[]>(file => file.Where((b, i) => b == replacementBytes[i]).Count() == replacementBytes.Length)), Times.Once);

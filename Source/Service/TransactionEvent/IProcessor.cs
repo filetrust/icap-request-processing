@@ -1,6 +1,6 @@
 ﻿namespace Service.TransactionEvent
 {
-    public interface ITransactionEventProcessor
+    public interface IProcessor
     {
         void Process();
     }
