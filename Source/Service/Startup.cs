@@ -55,7 +55,10 @@ namespace Service
             services.AddTransient<IFileAnalyser, FileAnalyser>();
             services.AddTransient<IAdaptor<ContentManagementFlags, string>, GlasswallConfigurationAdaptor>();
             services.AddTransient<IGlasswallEngineService, GlasswallEngineService>();
-            services.AddTransient<ITransactionEventProcessor, TransactionEventProcessor>();
+            services.AddTransient<IProcessor, Processor>();
+            services.AddTransient<IAdaptationRequestProcessor, AdaptationRequestProcessor>();
+            services.AddTransient<IAdaptationRequestController, AdaptationRequestController>();
+            services.AddTransient<IFileProcessor, FileProcessor>();
             services.AddScoped<IOutcomeSender, OutcomeSender>();
             services.AddScoped<ITransactionEventSender, TransactionEventSender>();
             services.AddScoped<IArchiveRequestSender, ArchiveRequestSender>();

@@ -7,6 +7,7 @@ using Glasswall.Core.Engine.Messaging;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
+using Service.StoreMessages.Enums;
 
 namespace Service.Tests.NCFS
 {
@@ -39,28 +40,77 @@ namespace Service.Tests.NCFS
                 _httpTest.Dispose();
             }
 
-            [Test]
-            public async Task Successful_Call_To_The_API_Returns_Correct_Outcome()
+            [TestCase(NcfsDecision.Block)]
+            [TestCase(NcfsDecision.Relay)]
+            [TestCase(NcfsDecision.Replace)]
+            public async Task Successful_Call_To_The_API_Returns_Correct_Decision(NcfsDecision expectedDecision)
             {
                 // Arrange
                 var expectedBase64 = "Expected Replacement";
-                var expectedDecision = FileOutcome.Replace;
 
-                _httpTest.RespondWithJson(new { base64Replacement = expectedBase64 }, headers: new Dictionary<string, string>() { { "ncfs-decision", expectedDecision } });
+                _httpTest.RespondWithJson(new { base64Replacement = expectedBase64 }, headers: new Dictionary<string, string>() { { "ncfs-decision", expectedDecision.ToString() } });
 
                 // Act
                 var result = await _client.GetOutcome("base64", FileType.Doc);
 
                 // Assert
                 Assert.That(result.NcfsDecision, Is.EqualTo(expectedDecision));
+            }
+
+            [Test]
+            public async Task Successful_Call_To_The_API_Returns_Base64_Replacement()
+            {
+                // Arrange
+                var expectedDecision = NcfsDecision.Replace;
+                var expectedBase64 = "Expected Replacement";
+
+                _httpTest.RespondWithJson(new { base64Replacement = expectedBase64 }, headers: new Dictionary<string, string>() { { "ncfs-decision", expectedDecision.ToString() } });
+
+                // Act
+                var result = await _client.GetOutcome("base64", FileType.Doc);
+
+                // Assert
                 Assert.That(result.Base64Replacement, Is.EqualTo(expectedBase64));
+            }
+
+            [Test]
+            public async Task Successful_Call_To_The_API_Returns_Replacement_MimeType()
+            {
+                // Arrange
+                var expectedDecision = NcfsDecision.Replace;
+                var expectedBase64 = "Expected Replacement";
+                var expectedMimeType = "text/json";
+
+                _httpTest.RespondWithJson(new { base64Replacement = expectedBase64 }, headers: new Dictionary<string, string>() { { "ncfs-decision", expectedDecision.ToString() }, { "ncfs-replacement-mimetype", expectedMimeType } });
+
+                // Act
+                var result = await _client.GetOutcome("base64", FileType.Doc);
+
+                // Assert
+                Assert.That(result.ReplacementMimeType, Is.EqualTo(expectedMimeType));
+            }
+
+            [Test]
+            public async Task Block_Is_Returned_When_Cannot_Parse_Returned_Decision()
+            {
+                // Arrange
+                var expectedBase64 = "Expected Replacement";
+                var expectedDecision = "I AM NOT A CORRECT DECISION";
+
+                _httpTest.RespondWithJson(new { base64Replacement = expectedBase64 }, headers: new Dictionary<string, string>() { { "ncfs-decision", expectedDecision.ToString() } });
+
+                // Act
+                var result = await _client.GetOutcome("base64", FileType.Doc);
+
+                // Assert
+                Assert.That(result.NcfsDecision, Is.EqualTo(NcfsDecision.Block));
             }
 
             [Test]
             public async Task Unsuccessful_Call_To_The_API_Returns_Failed_Outcome()
             {
                 // Arrange
-                var expectedDecision = FileOutcome.Failed;
+                var expectedDecision = NcfsDecision.Block;
 
                 _httpTest.RespondWith("error", 500);
 

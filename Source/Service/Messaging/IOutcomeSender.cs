@@ -1,7 +1,9 @@
-﻿namespace Service.Messaging
+﻿using System.Collections.Generic;
+
+namespace Service.Messaging
 {
     public interface IOutcomeSender
     {
-        void Send(string status, string fileId, string replyTo);
+        void Send(string status, string fileId, string replyTo, IDictionary<string, string> optionalHeaders = null);
     }
 }

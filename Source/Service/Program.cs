@@ -29,7 +29,7 @@ namespace Service
 
                 pusher.Start();
 
-                var service = scope.ServiceProvider.GetService<ITransactionEventProcessor>();
+                var service = scope.ServiceProvider.GetService<IProcessor>();
                 service.Process();
 
                 pusher.Stop();
