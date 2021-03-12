@@ -113,6 +113,12 @@ namespace Service.Tests.NCFS
             [TestCase("replace", NcfsDecision.Replace)]
             [TestCase("relay", NcfsDecision.Relay)]
             [TestCase("block", NcfsDecision.Block)]
+            [TestCase("REPLACE", NcfsDecision.Replace)]
+            [TestCase("RELAY", NcfsDecision.Relay)]
+            [TestCase("BLOCK", NcfsDecision.Block)]
+            [TestCase("Replace", NcfsDecision.Replace)]
+            [TestCase("Relay", NcfsDecision.Relay)]
+            [TestCase("Block", NcfsDecision.Block)]
             public async Task Decision_Enum_Is_Case_Insensitive(string returned, NcfsDecision expected)
             {
                 // Arrange
