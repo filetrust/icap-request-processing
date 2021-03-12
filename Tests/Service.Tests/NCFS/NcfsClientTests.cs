@@ -90,6 +90,44 @@ namespace Service.Tests.NCFS
                 Assert.That(result.ReplacementMimeType, Is.EqualTo(expectedMimeType));
             }
 
+            [TestCase("NCFS-DECISION", "NCFS-REPLACEMENT-MIMETYPE")]
+            [TestCase("ncfs-decision", "ncfs-replacement-mimetype")]
+            [TestCase("Ncfs-Decision", "Ncfs-Replacement-Mimetype")]
+            public async Task Headers_Are_Case_Insensitive(string decisionKey, string mimetypeKey)
+            {
+                // Arrange
+                var expectedDecision = NcfsDecision.Replace;
+                var expectedBase64 = "Expected Replacement";
+                var expectedMimeType = "text/json";
+
+                _httpTest.RespondWithJson(new { base64Replacement = expectedBase64 }, headers: new Dictionary<string, string>() { { decisionKey, expectedDecision.ToString() }, { mimetypeKey, expectedMimeType } });
+
+                // Act
+                var result = await _client.GetOutcome("base64", FileType.Doc);
+
+                // Assert
+                Assert.That(result.NcfsDecision, Is.EqualTo(expectedDecision));
+                Assert.That(result.ReplacementMimeType, Is.EqualTo(expectedMimeType));
+            }
+
+            [TestCase("replace", NcfsDecision.Replace)]
+            [TestCase("relay", NcfsDecision.Relay)]
+            [TestCase("block", NcfsDecision.Block)]
+            public async Task Decision_Enum_Is_Case_Insensitive(string returned, NcfsDecision expected)
+            {
+                // Arrange
+                var expectedBase64 = "Expected Replacement";
+                var expectedMimeType = "text/json";
+
+                _httpTest.RespondWithJson(new { base64Replacement = expectedBase64 }, headers: new Dictionary<string, string>() { { "ncfs-decision", returned }, { "ncfs-replacement-mimetype", expectedMimeType } });
+
+                // Act
+                var result = await _client.GetOutcome("base64", FileType.Doc);
+
+                // Assert
+                Assert.That(result.NcfsDecision, Is.EqualTo(expected));
+            }
+
             [Test]
             public async Task Block_Is_Returned_When_Cannot_Parse_Returned_Decision()
             {

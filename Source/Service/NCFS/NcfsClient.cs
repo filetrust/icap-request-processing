@@ -39,7 +39,7 @@ namespace Service.NCFS
 
                 return new NcfsOutcome
                 {
-                    NcfsDecision = Enum.Parse<NcfsDecision>(response.Headers.FirstOrDefault("ncfs-decision")),
+                    NcfsDecision = Enum.Parse<NcfsDecision>(response.Headers.FirstOrDefault("ncfs-decision"), true),
                     Base64Replacement = responseJson?.base64Replacement ?? string.Empty,
                     ReplacementMimeType = response.Headers.FirstOrDefault("ncfs-replacement-mimetype")
                 };
